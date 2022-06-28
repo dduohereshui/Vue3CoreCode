@@ -19,6 +19,9 @@
         age: 20,
         books: ["vue", "react"],
         gender: "male",
+        friends: {
+          haha: 00,
+        },
       };
       const state = reactive(data);
       // const state2 = reactive(data);
@@ -37,6 +40,7 @@
       setTimeout(() => {
         state.name = "mf";
       }, 2000);
+      console.log(state.friends);
     </script>
   </body>
 </html>

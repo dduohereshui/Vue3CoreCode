@@ -1,4 +1,6 @@
+import { isObject } from "@vue/shared";
 import { activeEffect, track, trigger } from "./effect";
+import { reactive } from "./reactive";
 export enum ReactiveFlags {
   IS_REACTIVE = "__v_isReactive",
 }
@@ -12,7 +14,11 @@ export const mutableHandler = {
     console.log(activeEffect, key, "activeEffect");
     // 拿到activeEffect，收集依赖
     track(target, "get", key);
-    return Reflect.get(target, key, receiver);
+    let res = Reflect.get(target, key, receiver);
+    if (isObject(res)) {
+      return reactive(res);
+    }
+    return res;
   },
   set(target, key, newVal, receiver) {
     // 修改值，那么该值对应的effect就应该重新执行

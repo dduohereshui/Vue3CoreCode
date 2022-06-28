@@ -1,4 +1,11 @@
 export let activeEffect = undefined;
+function cleanupEffect(effect) {
+  const { deps } = effect;
+  for (let i = 0; i < deps.length; i++) {
+    deps[i].delete(effect);
+  }
+  effect.deps.length = 0;
+}
 class ReactiveEffect {
   public active = true; // 默认激活状态
 
@@ -17,6 +24,8 @@ class ReactiveEffect {
       this.parent = activeEffect;
       //逻辑如下，this.fn执行，(effect 函数中用到了代理对象)走对象的sget，这时候就可以在get时进行依赖收集（拿到activeEffect）
       activeEffect = this;
+      // 执行用户函数之前，需要将已有的effect清除
+      cleanupEffect(this);
       this.fn();
     } finally {
       activeEffect = this.parent;
@@ -24,11 +33,20 @@ class ReactiveEffect {
       this.parent = null;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      cleanupEffect(this); // 停止effect的收集
+    }
+  }
 }
 
 export function effect(fn) {
   const _effect = new ReactiveEffect(fn);
   _effect.run();
+  const runner = _effect.run.bind(_effect);
+  runner.effect = _effect;
+  return runner;
 }
 // 收集依赖，值对应activeEffect
 // 一个属性对应多个effect，一个effect对应多个属性
@@ -60,10 +78,14 @@ export function trigger(target, type, key, oldVal, newVal) {
   // 触发的值没有在map中
   if (!depsMap) return;
   // 找到属性对应的effect: Set
-  const effects = depsMap.get(key);
+  let effects = depsMap.get(key);
   // 有effects就执行
-  effects &&
+  if (effects) {
+    // 引用隔离，避免同时add delete导致死循环
+    effects = new Set(effects);
     effects.forEach((effect) => {
-      effect.run();
+      // trigger执行effect，可能又会去执行track，会导致无限循环，
+      if (activeEffect !== effect) effect.run();
     });
+  }
 }
