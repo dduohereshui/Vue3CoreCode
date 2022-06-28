@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!--自己的 -->
+    <script src="./reactivity.global.js"></script>
+    <!-- <script src="../../../node_modules//@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <div id="app"></div>
+    <script>
+      const { effect, reactive } = VueReactivity;
+      // console.log(effect, reactive);
+      const app = document.getElementById("app");
+      const data = {
+        name: "cjl",
+        school: { name: "tinghua" },
+        books: ["vue", "react"],
+      };
+      const state1 = reactive(data);
+      const state2 = reactive(data);
+
+      const state3 = reactive(state2);
+
+      console.log(state1 === state2); // true
+
+      console.log(state3 === state2); // true
+      // effect(() => {
+      //   app.innerHTML = state.name + state.school.name;
+      // });
+      // setTimeout(() => {
+      //   state.name = "mf";
+      // }, 2000);
+    </script>
+  </body>
+</html>
