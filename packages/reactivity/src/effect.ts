@@ -6,18 +6,18 @@ function cleanupEffect(effect) {
   }
   effect.deps.length = 0;
 }
-class ReactiveEffect {
+export class ReactiveEffect {
   public active = true; // 默认激活状态
 
   public parent = null; // 为了做effect嵌套的activeEffect对应，老版本使用的栈实现
   public deps = []; // activeEffect也要记录有多少属性依赖他
-  constructor(public fn) {
+  constructor(public fn, public scheduler) {
     this.active = true;
   }
   run() {
     if (!this.active) {
       // 非激活状态就不需要进行依赖收集,直接执行函数
-      this.fn();
+      return this.fn();
     }
     // 是活跃状态就依赖收集
     try {
@@ -26,7 +26,7 @@ class ReactiveEffect {
       activeEffect = this;
       // 执行用户函数之前，需要将已有的effect清除
       cleanupEffect(this);
-      this.fn();
+      return this.fn();
     } finally {
       activeEffect = this.parent;
       // 这一句不是那么重要
@@ -41,8 +41,8 @@ class ReactiveEffect {
   }
 }
 
-export function effect(fn) {
-  const _effect = new ReactiveEffect(fn);
+export function effect(fn, options: any = {}) {
+  const _effect = new ReactiveEffect(fn, options.scheduler);
   _effect.run();
   const runner = _effect.run.bind(_effect);
   runner.effect = _effect;
@@ -64,10 +64,16 @@ export function track(target, type, key) {
     depsMap.set(key, (dep = new Set()));
   }
   // 收集过的 activeEffect不用重复收集
-  let shouldTrack = !dep.has(activeEffect);
-  if (shouldTrack) {
-    dep.add(activeEffect);
-    activeEffect.deps.push(dep); // activeEffect记录下依赖他的dep
+  trackEffects(dep);
+}
+
+export function trackEffects(dep) {
+  if (activeEffect) {
+    let shouldTrack = !dep.has(activeEffect);
+    if (shouldTrack) {
+      dep.add(activeEffect);
+      activeEffect.deps.push(dep); // activeEffect记录下依赖他的dep
+    }
   }
 }
 // console.log(targetMap);
@@ -81,11 +87,21 @@ export function trigger(target, type, key, oldVal, newVal) {
   let effects = depsMap.get(key);
   // 有effects就执行
   if (effects) {
-    // 引用隔离，避免同时add delete导致死循环
-    effects = new Set(effects);
-    effects.forEach((effect) => {
-      // trigger执行effect，可能又会去执行track，会导致无限循环，
-      if (activeEffect !== effect) effect.run();
-    });
+    triggerEffects(effects);
   }
+}
+
+export function triggerEffects(effects) {
+  // 引用隔离，避免同时add delete导致死循环
+  effects = new Set(effects);
+  effects.forEach((effect) => {
+    // trigger执行effect，可能又会去执行track，会导致无限循环，
+    if (activeEffect !== effect) {
+      if (effect.scheduler) {
+        effect.scheduler();
+      } else {
+        effect.run();
+      }
+    }
+  });
 }

@@ -12,7 +12,7 @@
     <!-- <script src="../../../node_modules//@vue/reactivity/dist/reactivity.global.js"></script> -->
     <div id="app"></div>
     <script>
-      const { effect, reactive } = VueReactivity;
+      const { effect, reactive, computed } = VueReactivity;
       const app = document.getElementById("app");
       const data = {
         name: "cjl",
@@ -24,6 +24,8 @@
         },
       };
       const state = reactive(data);
+
+      const msg = reactive({ firstname: "蔡", lastname: "杰鲁" });
       // const state2 = reactive(data);
 
       // const state3 = reactive(state2);
@@ -31,16 +33,26 @@
       // console.log(state1 === state2); // true
 
       // console.log(state3 === state2); // true
+      // effect(() => {
+      //   app.innerHTML = state.name + state.age;
+      //   effect(() => {
+      //     state.gender;
+      //   });
+      // });
+      // setTimeout(() => {
+      //   state.name = "mf";
+      // }, 2000);
+      // console.log(state.friends);
+      // computed
+      const name = computed(() => msg.firstname + msg.lastname);
+      console.log(name);
       effect(() => {
-        app.innerHTML = state.name + state.age;
-        effect(() => {
-          state.gender;
-        });
+        app.innerHTML = name.value;
       });
+
       setTimeout(() => {
-        state.name = "mf";
+        msg.firstname = "秘";
       }, 2000);
-      console.log(state.friends);
     </script>
   </body>
 </html>
