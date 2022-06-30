@@ -22,7 +22,8 @@ var VueReactivity = (() => {
   __export(src_exports, {
     computed: () => computed,
     effect: () => effect,
-    reactive: () => reactive
+    reactive: () => reactive,
+    watch: () => watch
   });
 
   // packages/reactivity/src/effect.ts
@@ -150,6 +151,9 @@ var VueReactivity = (() => {
   };
 
   // packages/reactivity/src/reactive.ts
+  function isReactive(value) {
+    return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+  }
   var reactiveMap = /* @__PURE__ */ new WeakMap();
   function reactive(target) {
     if (!isObject(target))
@@ -174,7 +178,7 @@ var VueReactivity = (() => {
       this.__v_isReadonly = true;
       this.__v_isRef = true;
       this.dep = /* @__PURE__ */ new Set();
-      this.effect = new ReactiveEffect(getter, () => {
+      this.effect = new ReactiveEffect(this.getter, () => {
         if (!this._dirty) {
           this._dirty = true;
           triggerEffects(this.dep);
@@ -207,6 +211,44 @@ var VueReactivity = (() => {
       setter = getterOptions.set;
     }
     return new ComputedRefImpl(getter, setter);
+  }
+
+  // packages/reactivity/src/watch.ts
+  function traversal(value, set = /* @__PURE__ */ new Set()) {
+    if (!isObject(value))
+      return value;
+    if (set.has(value))
+      return value;
+    set.add(value);
+    for (const key in value) {
+      traversal(value[key], set);
+    }
+    return value;
+  }
+  function watch(source, cb) {
+    let getter;
+    if (isReactive(source)) {
+      getter = () => traversal(source);
+    } else if (isFunction(source)) {
+      getter = source;
+    } else {
+      return "\u4E0D\u662F\u51FD\u6570\u6216\u5BF9\u8C61";
+    }
+    let oldValue;
+    let cleanup;
+    const onCleanUp = (fn) => {
+      cleanup = fn;
+    };
+    const job = () => {
+      if (cleanup) {
+        cleanup();
+      }
+      const newValue = effect2.run();
+      cb(newValue, oldValue, onCleanUp);
+      oldValue = newValue;
+    };
+    const effect2 = new ReactiveEffect(getter, job);
+    oldValue = effect2.run();
   }
   return __toCommonJS(src_exports);
 })();

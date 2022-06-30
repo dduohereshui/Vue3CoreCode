@@ -1,5 +1,9 @@
 import { isObject } from "@vue/shared";
 import { mutableHandler, ReactiveFlags } from "./baseHandler";
+
+export function isReactive(value) {
+  return !!(value && value[ReactiveFlags.IS_REACTIVE]);
+}
 // 只能做对象的代理
 const reactiveMap = new WeakMap(); // 同一个原始对象被reactive两次，应返回同一个代理对象
 export function reactive(target) {

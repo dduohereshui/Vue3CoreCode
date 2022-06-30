@@ -8,7 +8,7 @@ class ComputedRefImpl {
   public _value;
   public dep = new Set();
   constructor(public getter, public setter) {
-    this.effect = new ReactiveEffect(getter, () => {
+    this.effect = new ReactiveEffect(this.getter, () => {
       // 调度器，取值就会走这里
       if (!this._dirty) {
         this._dirty = true;
