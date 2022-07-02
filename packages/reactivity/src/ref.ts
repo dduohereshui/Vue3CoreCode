@@ -1,4 +1,4 @@
-import { isObject } from "@vue/shared";
+import { isArray, isObject } from "@vue/shared";
 import { trackEffects, triggerEffects } from "./effect";
 import { reactive } from "./reactive";
 
@@ -26,4 +26,24 @@ class RefImpl {
 }
 export function ref(value) {
   return new RefImpl(value);
+}
+
+export function toRefs(object) {
+  const result = isArray(object) ? new Array(object.length) : {};
+  for (const key in object) {
+    result[key] = toRef(object, key);
+  }
+  return result;
+}
+function toRef(object, key) {
+  return new ObjectRefImpl(object, key);
+}
+class ObjectRefImpl {
+  constructor(public object, public key) {}
+  get value() {
+    return this.object[this.key];
+  }
+  set value(newValue) {
+    this.object[this.key] = newValue;
+  }
 }

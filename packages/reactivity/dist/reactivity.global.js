@@ -24,6 +24,7 @@ var VueReactivity = (() => {
     effect: () => effect,
     reactive: () => reactive,
     ref: () => ref,
+    toRefs: () => toRefs,
     watch: () => watch
   });
 
@@ -278,6 +279,28 @@ var VueReactivity = (() => {
   function ref(value) {
     return new RefImpl(value);
   }
+  function toRefs(object) {
+    const result = isArray(object) ? new Array(object.length) : {};
+    for (const key in object) {
+      result[key] = toRef(object, key);
+    }
+    return result;
+  }
+  function toRef(object, key) {
+    return new ObjectRefImpl(object, key);
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+    set value(newValue) {
+      this.object[this.key] = newValue;
+    }
+  };
   return __toCommonJS(src_exports);
 })();
 //# sourceMappingURL=reactivity.global.js.map

@@ -1,15 +1,12 @@
 {
-  "name": "@vue/reactivity",
+  "name": "@vue/runtime-dom",
   "version": "1.0.0",
   "description": "",
   "main": "index.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "",
   "license": "ISC",
   "buildOptions": {
-    "name": "VueReactivity",
+    "name": "VueRuntimeDOM",
     "formats": [
       "global",
       "cjs",
