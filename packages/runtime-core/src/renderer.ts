@@ -1,4 +1,5 @@
 import { isString, ShapeFlags } from "@vue/shared";
+import { getSequence } from "./sequence";
 import { createVnode, Text, isSameVnode } from "./vnode";
 export function createRenderer(renderOptions) {
   const {
@@ -90,7 +91,6 @@ export function createRenderer(renderOptions) {
       }
       i++;
     }
-
     // sync from end
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1];
@@ -127,9 +127,55 @@ export function createRenderer(renderOptions) {
           i++;
         }
       }
-    }
+    } else {
+      // 乱序
+      const s1 = i;
+      const s2 = i;
+      // console.log(i, e1, e2);
+      // 创建 新序列中key和索引值的映射表
+      const keyToNewIndex = new Map();
+      for (let i = s2; i <= e2; i++) {
+        keyToNewIndex.set(c2[i].key, i);
+      }
+      console.log(keyToNewIndex);
+      //
+      const toBePatched = e2 - s2 + 1;
+      const newIndexToOldIndexMap = new Array(toBePatched).fill(0);
 
-    // 乱序
+      // 循环老的序列（复用或创建元素）
+      for (let i = s1; i <= e1; i++) {
+        const oldChild = c1[i];
+        // 老元素能在新序列中找到，复用
+        const newIndex = keyToNewIndex.get(oldChild.key);
+        // 没找到就直接干掉
+        if (newIndex == undefined) {
+          unmount(oldChild);
+        } else {
+          newIndexToOldIndexMap[newIndex - s2] = i + 1;
+          // 对比差异 复用
+          patch(oldChild, c2[newIndex], el);
+        }
+      }
+      // 得到最长递增子序列
+      const incrementSequence = getSequence(newIndexToOldIndexMap);
+      // console.log(newIndexToOldIndexMap);
+      let j = incrementSequence.length - 1;
+      for (let i = toBePatched - 1; i >= 0; i--) {
+        let index = s2 + i;
+        let current = c2[index];
+        let anchor = index + 1 < c2.length ? c2[index + 1].el : null;
+        if (newIndexToOldIndexMap[i] === 0) {
+          // 在老的序列中不存在 需要创建
+          patch(null, current, el, anchor);
+        } else {
+          if (i !== incrementSequence[j]) {
+            hostInsert(current.el, el, anchor);
+          } else {
+            j--;
+          }
+        }
+      }
+    }
   };
   // 比对儿子 ，diff算法核心
   const patchChildren = (n1, n2, el) => {
