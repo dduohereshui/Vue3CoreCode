@@ -3,7 +3,7 @@
  * @param prevValue style的旧对象
  * @param nextValue style的新对象
  */
-export function patchStyle(el, prevValue, nextValue) {
+export function patchStyle(el, prevValue, nextValue = {}) {
   for (const key in nextValue) {
     el.style[key] = nextValue[key];
   }

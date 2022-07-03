@@ -1,5 +1,5 @@
 import { isString, ShapeFlags } from "@vue/shared";
-import { createVnode, Text } from "./vnode";
+import { createVnode, Text, isSameVnode } from "./vnode";
 export function createRenderer(renderOptions) {
   const {
     insert: hostInsert,
@@ -8,20 +8,23 @@ export function createRenderer(renderOptions) {
     createElement: hostCreateElement,
     createText: hostCreateText,
     remove: hostRemove,
+    setText: hostSetText,
+    nextSibling: hostNextSibling,
   } = renderOptions;
-  const normalize = (child) => {
-    if (isString(child)) {
-      return createVnode(Text, null, child);
+  const normalize = (children, i) => {
+    if (isString(children[i])) {
+      let vnode = createVnode(Text, null, children[i]);
+      children[i] = vnode;
     }
-    return child;
+    return children[i];
   };
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
-      let child = normalize(children[i]);
+      let child = normalize(children, i);
       patch(null, child, container);
     }
   };
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     let { type, props, children, shapeFlag } = vnode;
     let el = (vnode.el = hostCreateElement(type));
     if (props) {
@@ -37,30 +40,189 @@ export function createRenderer(renderOptions) {
       mountChildren(children, el);
     }
     // 将该元素插入到容器里
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   };
+  // 处理文本
   const processText = (n1, n2, container) => {
+    // console.log(n1, n2, container);
     if (n1 == null) {
       // 初始化
       hostInsert((n2.el = hostCreateText(n2.children)), container);
+    } else {
+      // n1 n2 都是文本 复用n1的节点
+      const el = (n2.el = n1.el);
+      if (n1.children !== n2.children) {
+        hostSetText(el, n2.children);
+      }
     }
   };
-  const patch = (n1, n2, container) => {
-    if (n1 === n2) return;
-    const { type, shapeFlag } = n2;
-    if (n1 == null) {
-      // 老的虚拟节点是null，就挂载
-      switch (type) {
-        case Text: // h('hello') 希望直接渲染出一个字符串
-          processText(n1, n2, container);
-          break;
-        default:
-          if (shapeFlag & ShapeFlags.ELEMENT) {
-            mountElement(n2, container);
-          }
+  // patch Props
+  const patchProps = (oldProps, newProps, el) => {
+    for (const key in newProps) {
+      hostPatchProp(el, key, oldProps[key], newProps[key]);
+    }
+    for (const key in oldProps) {
+      if (!newProps[key]) {
+        hostPatchProp(el, key, oldProps[key], undefined);
+      }
+    }
+  };
+  const unmountChildren = (children: any[]) => {
+    console.log(children);
+
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i]);
+    }
+  };
+  // const patchUnkeyedChildren = (c1, c2, el) => {};
+  const patchKeyedChildren = (c1, c2, el) => {
+    let i = 0;
+    let e1 = c1.length - 1;
+    let e2 = c2.length - 1;
+    // sync from start
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[i];
+      const n2 = c2[i];
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, el);
+      } else {
+        break;
+      }
+      i++;
+    }
+
+    // sync from end
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[e1];
+      const n2 = c2[e2];
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, el);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+    // common sequence + mount
+    // 只要i比e1大，那么i和e2之间的就是新增的
+    if (i > e1) {
+      // 这是新增的部分
+      if (i <= e2) {
+        while (i <= e2) {
+          // console.log("patch");
+          // e2下一个有节点就代表insertBefore，没有就是不appendChild
+          const nextPos = e2 + 1;
+          // 参照物
+          const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+          patch(null, c2[i], el, anchor); //
+          i++;
+        }
+      }
+    }
+    // common sequence + unmount
+    else if (i > e2) {
+      if (i <= e1) {
+        while (i <= e1) {
+          unmount(c1[i]); // 卸载掉多的
+          i++;
+        }
+      }
+    }
+
+    // 乱序
+  };
+  // 比对儿子 ，diff算法核心
+  const patchChildren = (n1, n2, el) => {
+    // debugger;
+    const c1 = n1.children;
+    const c2 = n2.children;
+    // 文本 null 数组
+    // 拿到他们的类型
+    const prevShapeFlag = n1.shapeFlag;
+    const shapeFlag = n2.shapeFlag;
+
+    // 1. 文本 数组
+    // 2. 文本 文本
+    // 3. 数组 数组 （diff算法）
+    // 4. 数组 文本
+    // 5. null 数组
+    // 6. null 文本
+
+    // 新的是一个文本
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 老的是一个数组
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 移除老的所有儿子
+        unmountChildren(c1);
+      }
+      // 老的也是文本
+      if (c1 !== c2) {
+        hostSetElementText(el, c2);
       }
     } else {
-      // 更新
+      // 新的为数组或者是空
+      // 之前的是数组
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 现在也是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // diff 算法
+          // debugger;
+          // patchUnkeyedChildren(c1, c2, el); // 全量更新 没有key
+          patchKeyedChildren(c1, c2, el); //
+        } else {
+          // 现在是文本或者空
+          unmountChildren(c1);
+        }
+      } else {
+        // 之前是文本
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          // 清空文本
+          hostSetElementText(el, "");
+        }
+        // 现在是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // 挂载数组
+          mountChildren(c2, el);
+        }
+      }
+    }
+  };
+  const patchElement = (n1, n2) => {
+    const el = (n2.el = n1.el);
+    const oldProps = n1.props || {};
+    const newProps = n2.props || {};
+    // 处理属性
+    patchProps(oldProps, newProps, el);
+    // 处理儿子
+    patchChildren(n1, n2, el);
+  };
+  const processElement = (n1, n2, container, anchor) => {
+    // 元素挂载
+    if (n1 === null) {
+      mountElement(n2, container, anchor);
+    } else {
+      // n1 n2 都有 进行更新 （会有儿子的情况，较为复杂）
+      patchElement(n1, n2);
+    }
+  };
+
+  const patch = (n1, n2, container, anchor = null) => {
+    if (n1 === n2) return;
+    // n1 n2 类型 key都不一样
+    if (n1 && !isSameVnode(n1, n2)) {
+      // 删除老的
+      unmount(n1);
+      n1 = null;
+    }
+    const { type, shapeFlag } = n2;
+    switch (type) {
+      case Text: // h('hello') 希望直接渲染出一个字符串
+        processText(n1, n2, container);
+        break;
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container, anchor);
+        }
     }
   };
   const unmount = (vnode) => {

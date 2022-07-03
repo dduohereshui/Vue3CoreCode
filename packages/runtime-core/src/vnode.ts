@@ -3,6 +3,9 @@ export const Text = Symbol("Text");
 export function isVnode(value) {
   return !!(value && value.__v_isVnode);
 }
+export function isSameVnode(n1, n2) {
+  return n1.type === n2.type && n1.key === n2.key;
+}
 // 组件 元素 文本
 export function createVnode(type, props, children = null) {
   // type 是string的话，就表明这是一个元素

@@ -12,16 +12,39 @@
     <script>
       const { createRenderer, render, h, Text } = VueRuntimeDOM;
       // console.log(createRenderer, render, h);
-      const vdom = h("div", { style: { color: "red" } }, [
-        h("span", {}, "hello"),
-        h("span", {}, "world"),
-        "哈哈哈哈",
-      ]);
-      console.log(vdom);
-      render(vdom, app);
+      // const vdom = h("div", { style: { color: "red" } }, [
+      //   h("span", {}, "hello"),
+      //   h("span", {}, "world"),
+      //   "哈哈哈哈",
+      // ]);
+      // console.log(vdom);
+      // render(
+      //   h("div", { style: { color: "red" } }, [
+      //     h("span", {}, "xixi"),
+      //     h("span", {}, "xixi"),
+      //   ]),
+      //   app
+      // );
+      render(
+        h("div", {}, [
+          h("div", { key: "a", style: { color: "blue" } }, "a"),
+          h("div", { key: "b" }, "b"),
+          h("div", { key: "c" }, "c"),
+        ]),
+        app
+      );
 
       setTimeout(() => {
-        render(null, app);
+        render(
+          h("div", {}, [
+            // h("div", { key: "f", style: { color: "orange" } }, "f"),
+            // h("div", { key: "e", style: { color: "red" } }, "e"),
+            // h("div", { key: "a", style: { color: "green" } }, "a"),
+            h("div", { key: "b" }, "b"),
+            h("div", { key: "c" }, "c"),
+          ]),
+          app
+        );
       }, 2000);
     </script>
   </body>
