@@ -10,14 +10,19 @@
     <script src="./runtime-dom.global.js"></script>
     <div id="app"></div>
     <script>
-      const { createRenderer, render, h } = VueRuntimeDOM;
+      const { createRenderer, render, h, Text } = VueRuntimeDOM;
       // console.log(createRenderer, render, h);
       const vdom = h("div", { style: { color: "red" } }, [
         h("span", {}, "hello"),
         h("span", {}, "world"),
+        "哈哈哈哈",
       ]);
-
       console.log(vdom);
+      render(vdom, app);
+
+      setTimeout(() => {
+        render(null, app);
+      }, 2000);
     </script>
   </body>
 </html>

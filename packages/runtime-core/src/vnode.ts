@@ -1,5 +1,5 @@
 import { isString, ShapeFlags, isArray } from "@vue/shared";
-
+export const Text = Symbol("Text");
 export function isVnode(value) {
   return !!(value && value.__v_isVnode);
 }
