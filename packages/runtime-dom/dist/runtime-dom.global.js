@@ -30,6 +30,7 @@ var VueRuntimeDOM = (() => {
   var isObject = (val) => {
     return typeof val === "object" && val !== null;
   };
+  var isNumber = (value) => typeof value === "number";
   var isString = (value) => typeof value === "string";
   var isArray = Array.isArray;
   var assign = Object.assign;
@@ -345,7 +346,7 @@ var VueRuntimeDOM = (() => {
       nextSibling: hostNextSibling
     } = renderOptions2;
     const normalize = (children, i) => {
-      if (isString(children[i])) {
+      if (isString(children[i]) || isNumber(children[i])) {
         let vnode = createVnode(Text, null, children[i]);
         children[i] = vnode;
       }

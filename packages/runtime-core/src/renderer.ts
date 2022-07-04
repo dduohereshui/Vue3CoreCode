@@ -1,4 +1,4 @@
-import { isString, ShapeFlags } from "@vue/shared";
+import { isNumber, isString, ShapeFlags } from "@vue/shared";
 import { getSequence } from "./sequence";
 import { createVnode, Text, isSameVnode, Fragment } from "./vnode";
 import { createComponentInstance, setupComponent } from "./component";
@@ -17,7 +17,7 @@ export function createRenderer(renderOptions) {
     nextSibling: hostNextSibling,
   } = renderOptions;
   const normalize = (children, i) => {
-    if (isString(children[i])) {
+    if (isString(children[i]) || isNumber(children[i])) {
       let vnode = createVnode(Text, null, children[i]);
       children[i] = vnode;
     }
