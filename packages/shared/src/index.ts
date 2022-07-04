@@ -9,7 +9,8 @@ const isString = (value) => typeof value === "string";
 
 const isArray = Array.isArray;
 const assign = Object.assign;
-
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+const hasOwn = (value, key) => hasOwnProperty.call(value, key);
 export const enum ShapeFlags {
   ELEMENT = 1,
   FUNCTIONAL_COMPONENT = 1 << 1,
@@ -23,4 +24,4 @@ export const enum ShapeFlags {
   COMPONENT_KEPT_ALIVE = 1 << 9,
   COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT,
 }
-export { isObject, isFunction, isArray, assign, isNumber, isString };
+export { isObject, isFunction, isArray, assign, isNumber, isString, hasOwn };

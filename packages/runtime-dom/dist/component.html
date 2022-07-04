@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text } = VueRuntimeDOM;
+
+      const VueComponent = {
+        props: {
+          address: String,
+          c: {},
+        },
+        data() {
+          return {
+            name: "cjl",
+            age: 20,
+          };
+        },
+        // 渲染的是render函数返回的值
+        render() {
+          // setTimeout(() => {
+          //   this.age++;
+          // }, 1000)
+          // console.log(this.props.address);
+          return h(
+            "p",
+            { style: { color: "red" } },
+            `我是${this.name},今年${this.age}岁了,props:${this.address},attrs:${this.$attrs.a}`
+          );
+        },
+      };
+
+      render(
+        h(VueComponent, { address: "杭州", a: 1, b: 2, c: { n: 3 } }),
+        app
+      );
+      // render(
+      //   h("div", {}, [
+      //     h("div", { key: "a", style: { color: "blue" } }, "a"),
+      //     h("div", { key: "b" }, "b"),
+      //     h("div", { key: "c" }, "c"),
+      //     h("div", { key: "d" }, "d"),
+      //     h("div", { key: "e" }, "e"),
+      //     h("div", { key: "f" }, "f"),
+      //     h("div", { key: "g" }, "g"),
+      //   ]),
+      //   app
+      // );
+
+      // setTimeout(() => {
+      //   render(
+      //     h("div", {}, [
+      //       h("div", { key: "a", style: { color: "green" } }, "a"),
+      //       h("div", { key: "b" }, "b"),
+      //       h("div", { key: "e" }, "e"),
+      //       h("div", { key: "c" }, "c"),
+      //       h("div", { key: "d" }, "d"),
+      //       h("div", { key: "h" }, "h"),
+      //       h("div", { key: "f" }, "f"),
+      //       h("div", { key: "g" }, "g"),
+      //     ]),
+      //     app
+      //   );
+      // }, 2000);
+    </script>
+  </body>
+</html>

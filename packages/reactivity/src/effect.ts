@@ -11,7 +11,7 @@ export class ReactiveEffect {
   public active = true; // 默认激活状态
   public parent = null; // 为了做effect嵌套的activeEffect对应，老版本使用的栈实现
   public deps = []; // activeEffect也要记录有多少属性依赖他
-  constructor(public fn, public scheduler) {
+  constructor(public fn, public scheduler?) {
     this.active = true;
   }
   run() {

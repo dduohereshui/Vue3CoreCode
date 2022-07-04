@@ -1,6 +1,10 @@
 import { isString, ShapeFlags } from "@vue/shared";
 import { getSequence } from "./sequence";
 import { createVnode, Text, isSameVnode, Fragment } from "./vnode";
+import { createComponentInstance, setupComponent } from "./component";
+import { ReactiveEffect } from "@vue/reactivity";
+import { queueJob } from "./scheduler";
+
 export function createRenderer(renderOptions) {
   const {
     insert: hostInsert,
@@ -258,6 +262,52 @@ export function createRenderer(renderOptions) {
       patchChildren(n1, n2, container);
     }
   };
+
+  const mountComponent = (vnode, container, anchor) => {
+    // 1. 创建一个组件实例
+    const instance = (vnode.component = createComponentInstance(vnode));
+    // 2. 给组件实例上的属性赋值
+    setupComponent(instance);
+
+    // 初始化渲染effect
+    setupRenderEffect(instance, container, anchor);
+  };
+  const setupRenderEffect = (instance, container, anchor) => {
+    const updateComponent = () => {
+      const { render } = instance;
+      // 没有挂载 就走挂载逻辑
+      if (!instance.isMounted) {
+        // 注意，组件是无需挂载的，需要挂载的是组件 render函数返回的vnode，也就是子树
+        const subTree = render.call(instance.proxy); // 使用instance.proxy 是想自定义查找顺序，data，props，attrs
+        patch(null, subTree, container, anchor); // 将subTree的真实节点挂载到dom上
+        instance.subTree = subTree; // 供之后更新用
+        instance.isMounted = true;
+      } else {
+        // 更新逻辑
+        const subTree = render.call(instance.proxy); // 重新计算得到新树
+        patch(instance.subTree, subTree, container, anchor);
+      }
+    };
+
+    const effect = new ReactiveEffect(
+      updateComponent,
+      () => {
+        // console.log(instance.update, "update");
+        queueJob(instance.update);
+      } //  将更新缓存，不能同步更新，会出现严重bug
+    );
+
+    const update = (instance.update = effect.run.bind(effect));
+    update(); // 组件的更新方法
+  };
+  // 处理组件
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountComponent(n2, container, anchor);
+    } else {
+      // 组件更新靠的是props，slot等等
+    }
+  };
   const patch = (n1, n2, container, anchor = null) => {
     if (n1 === n2) return;
     // n1 n2 类型 key都不一样
@@ -277,6 +327,8 @@ export function createRenderer(renderOptions) {
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
+        } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+          processComponent(n1, n2, container, anchor);
         }
     }
   };
@@ -290,6 +342,7 @@ export function createRenderer(renderOptions) {
         unmount(container._vnode);
       }
     } else {
+      // console.log(vnode, "vnode");
       // 这里既有初始化的逻辑，又有更新的逻辑
       // conatiner挂载过了就会有_vnode属性，那么就会走更新的逻辑
       patch(container._vnode || null, vnode, container);

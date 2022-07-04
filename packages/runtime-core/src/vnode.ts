@@ -1,4 +1,4 @@
-import { isString, ShapeFlags, isArray } from "@vue/shared";
+import { isString, ShapeFlags, isArray, isObject } from "@vue/shared";
 export const Text = Symbol("Text");
 export const Fragment = Symbol("Fragment");
 export function isVnode(value) {
@@ -10,7 +10,11 @@ export function isSameVnode(n1, n2) {
 // 组件 元素 文本
 export function createVnode(type, props, children = null) {
   // type 是string的话，就表明这是一个元素
-  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+  let shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT // 带有状态的组件
+    : 0;
   const vnode = {
     type,
     props,
