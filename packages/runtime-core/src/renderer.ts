@@ -1,6 +1,6 @@
 import { isString, ShapeFlags } from "@vue/shared";
 import { getSequence } from "./sequence";
-import { createVnode, Text, isSameVnode } from "./vnode";
+import { createVnode, Text, isSameVnode, Fragment } from "./vnode";
 export function createRenderer(renderOptions) {
   const {
     insert: hostInsert,
@@ -251,7 +251,13 @@ export function createRenderer(renderOptions) {
       patchElement(n1, n2);
     }
   };
-
+  const processFragment = (n1, n2, container) => {
+    if (n1 == null) {
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
+    }
+  };
   const patch = (n1, n2, container, anchor = null) => {
     if (n1 === n2) return;
     // n1 n2 类型 key都不一样
@@ -264,6 +270,9 @@ export function createRenderer(renderOptions) {
     switch (type) {
       case Text: // h('hello') 希望直接渲染出一个字符串
         processText(n1, n2, container);
+        break;
+      case Fragment:
+        processFragment(n1, n2, container);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
