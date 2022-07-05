@@ -4,6 +4,7 @@ import { createVnode, Text, isSameVnode, Fragment } from "./vnode";
 import { createComponentInstance, setupComponent } from "./component";
 import { ReactiveEffect } from "@vue/reactivity";
 import { queueJob } from "./scheduler";
+import { hasPropsChange, updateProps } from "./componentProps";
 
 export function createRenderer(renderOptions) {
   const {
@@ -272,6 +273,11 @@ export function createRenderer(renderOptions) {
     // 初始化渲染effect
     setupRenderEffect(instance, container, anchor);
   };
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null;
+    instance.vnode = next;
+    updateProps(instance.props, next.props);
+  };
   const setupRenderEffect = (instance, container, anchor) => {
     const updateComponent = () => {
       const { render } = instance;
@@ -283,6 +289,11 @@ export function createRenderer(renderOptions) {
         instance.subTree = subTree; // 供之后更新用
         instance.isMounted = true;
       } else {
+        const { next } = instance;
+        if (next) {
+          // 更新前要将新属性进行更改
+          updateComponentPreRender(instance, next);
+        }
         // 更新逻辑
         const subTree = render.call(instance.proxy); // 重新计算得到新树
         patch(instance.subTree, subTree, container, anchor);
@@ -300,12 +311,30 @@ export function createRenderer(renderOptions) {
     const update = (instance.update = effect.run.bind(effect));
     update(); // 组件的更新方法
   };
+  const shouldUpdateComponent = (n1, n2) => {
+    const { props: prevProps } = n1;
+    const { props: nextProps } = n2;
+    if (prevProps === nextProps) return false;
+    if (hasPropsChange(prevProps, nextProps)) {
+      return true;
+    }
+  };
+  const updateComponent = (n1, n2) => {
+    const instance = (n2.component = n1.component); // 组件需要复用的是组件实例
+
+    // updateProps(instance, prevProps, nextProps); // 属性更新
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2;
+      instance.update();
+    }
+  };
   // 处理组件
   const processComponent = (n1, n2, container, anchor) => {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
       // 组件更新靠的是props，slot等等
+      updateComponent(n1, n2);
     }
   };
   const patch = (n1, n2, container, anchor = null) => {

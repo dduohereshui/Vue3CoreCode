@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text, Fragment } = VueRuntimeDOM;
+      const MyComponent = {
+        props: {
+          address: String,
+        },
+        data() {
+          return {};
+        },
+        render() {
+          return h("div", { style: { color: "red" } }, `${this.address}`);
+        },
+      };
+      const VueComponent = {
+        data() {
+          return {
+            name: "cjl",
+            age: 20,
+            flag: false,
+          };
+        },
+        render() {
+          return h("div", [
+            h(
+              "button",
+              {
+                onClick: () => {
+                  this.flag = !this.flag;
+                },
+              },
+              "切换渲染"
+            ),
+            h(MyComponent, { address: this.flag ? "太阳" : "地球" }),
+          ]);
+        },
+      };
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>
