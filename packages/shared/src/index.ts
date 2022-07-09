@@ -11,6 +11,9 @@ const isArray = Array.isArray;
 const assign = Object.assign;
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 const hasOwn = (value, key) => hasOwnProperty.call(value, key);
+export const invokeArrayFns = (arrayFns: (() => void)[]) => {
+  arrayFns.forEach((fn) => fn());
+};
 export const enum ShapeFlags {
   ELEMENT = 1,
   FUNCTIONAL_COMPONENT = 1 << 1,

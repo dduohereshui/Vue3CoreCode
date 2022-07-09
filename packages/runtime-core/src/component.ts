@@ -1,6 +1,14 @@
 import { hasOwn, isFunction, isObject } from "@vue/shared";
 import { reactive, proxyRefs } from "@vue/reactivity";
 import { initProps, initSlots } from "./componentProps";
+
+export let currentInstance = null;
+// 暴露出现在的组件实例
+export const setCurrentInstance = (instance) => {
+  currentInstance = instance;
+};
+export const getCurrentInstance = () => currentInstance;
+
 // 公开属性映射表
 const publicPropertyMap = {
   $attrs: (i) => i.attrs,
@@ -80,7 +88,12 @@ export function setupComponent(instance) {
       attrs: instance.attrs,
       slots: instance.slots,
     };
+    // 设置currentInstance
+    setCurrentInstance(instance);
     const setupResult = setup(instance.props, setupContext);
+    // 该setup执行完 currentInstance要置为null，以便与其他的setup使用
+    setCurrentInstance(null);
+
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else if (isObject(setupResult)) {
