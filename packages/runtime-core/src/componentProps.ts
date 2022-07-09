@@ -1,5 +1,5 @@
 import { reactive } from "@vue/reactivity";
-import { hasOwn } from "@vue/shared";
+import { hasOwn, ShapeFlags } from "@vue/shared";
 /**
  * @param instance 组件实例
  * @param rawProps 用户在组件上穿的数据
@@ -50,5 +50,12 @@ export function updateProps(prevProps, nextProps) {
         delete prevProps[key];
       }
     }
+  }
+}
+
+export function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    // 将插槽赋值到实例上
+    instance.slots = children;
   }
 }

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text, Fragment, ref, reactive } =
+        VueRuntimeDOM;
+
+      const MyComponent = {
+        render() {
+          return h(Fragment, [
+            h("div", this.$slots.header()),
+            h("div", this.$slots.footer()),
+          ]);
+        },
+      };
+      const VueComponent = {
+        render() {
+          // 插槽是存储在对象中，之前渲染的都是字符串和数组
+          return h(MyComponent, null, {
+            header: () => h("div", "我是header"),
+            footer: () => h("div", "我是footer"),
+          });
+        },
+      };
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>

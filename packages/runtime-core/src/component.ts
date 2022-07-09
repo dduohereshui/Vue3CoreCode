@@ -1,9 +1,10 @@
 import { hasOwn, isFunction, isObject } from "@vue/shared";
 import { reactive, proxyRefs } from "@vue/reactivity";
-import { initProps } from "./componentProps";
+import { initProps, initSlots } from "./componentProps";
 // 公开属性映射表
 const publicPropertyMap = {
   $attrs: (i) => i.attrs,
+  $slots: (i) => i.slots,
 };
 export function createComponentInstance(vnode) {
   const instance = {
@@ -16,7 +17,8 @@ export function createComponentInstance(vnode) {
     props: {},
     attrs: {},
     proxy: null,
-    setupState: {},
+    setupState: {}, // setup返回的数据
+    slots: {}, // 插槽
   };
   return instance;
 }
@@ -50,8 +52,12 @@ const publicInstanceProxy = {
   },
 };
 export function setupComponent(instance) {
-  const { props, type } = instance.vnode;
+  // children 可能是插槽
+  const { props, type, children } = instance.vnode;
+  // 初始化props（给组件的实例的props和attrs赋值）
   initProps(instance, props);
+  // 初始化插槽
+  initSlots(instance, children);
   // 用户在页面取值都会走到这里面来
   instance.proxy = new Proxy(instance, publicInstanceProxy);
 

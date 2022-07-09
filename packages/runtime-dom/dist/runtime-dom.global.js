@@ -116,6 +116,8 @@ var VueRuntimeDOM = (() => {
       let type2 = 0;
       if (isArray(children)) {
         type2 = 16 /* ARRAY_CHILDREN */;
+      } else if (isObject(children)) {
+        type2 = 32 /* SLOTS_CHILDREN */;
       } else {
         children = String(children);
         type2 = 8 /* TEXT_CHILDREN */;
@@ -454,10 +456,16 @@ var VueRuntimeDOM = (() => {
       }
     }
   }
+  function initSlots(instance, children) {
+    if (instance.vnode.shapeFlag & 32 /* SLOTS_CHILDREN */) {
+      instance.slots = children;
+    }
+  }
 
   // packages/runtime-core/src/component.ts
   var publicPropertyMap = {
-    $attrs: (i) => i.attrs
+    $attrs: (i) => i.attrs,
+    $slots: (i) => i.slots
   };
   function createComponentInstance(vnode) {
     const instance = {
@@ -470,7 +478,8 @@ var VueRuntimeDOM = (() => {
       props: {},
       attrs: {},
       proxy: null,
-      setupState: {}
+      setupState: {},
+      slots: {}
     };
     return instance;
   }
@@ -504,8 +513,9 @@ var VueRuntimeDOM = (() => {
     }
   };
   function setupComponent(instance) {
-    const { props, type } = instance.vnode;
+    const { props, type, children } = instance.vnode;
     initProps(instance, props);
+    initSlots(instance, children);
     instance.proxy = new Proxy(instance, publicInstanceProxy);
     const { data } = type;
     if (data) {
