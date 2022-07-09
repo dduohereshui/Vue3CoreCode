@@ -6,10 +6,6 @@ import { patchProp } from "./patchProp";
 
 const renderOptions = assign(nodeOps, { patchProp });
 
-// createRenderer(renderOptions).render(
-//   h("div", { class: "aa" }, "我是儿子"),
-//   document.getElementById("app")
-// );
 export function render(vnode, container) {
   createRenderer(renderOptions).render(vnode, container);
 }

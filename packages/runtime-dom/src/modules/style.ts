@@ -11,7 +11,7 @@ export function patchStyle(el, prevValue, nextValue = {}) {
   if (prevValue) {
     for (const key in prevValue) {
       if (!nextValue[key]) {
-        el.style[key] = null;
+        delete el.style[key];
       }
     }
   }

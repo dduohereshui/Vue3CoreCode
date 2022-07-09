@@ -11,12 +11,11 @@
     <div id="app"></div>
     <script>
       // 组件的渲染逻辑
-      const { createRenderer, render, h, Text } = VueRuntimeDOM;
+      const { createRenderer, render, h, Text, Fregment } = VueRuntimeDOM;
 
       const VueComponent = {
         props: {
           address: String,
-          c: {},
         },
         data() {
           return {
@@ -26,22 +25,16 @@
         },
         // 渲染的是render函数返回的值
         render() {
-          // setTimeout(() => {
-          //   this.age++;
-          // }, 1000)
-          // console.log(this.props.address);
-          return h(
-            "p",
-            { style: { color: "red" } },
-            `我是${this.name},今年${this.age}岁了,props:${this.address},attrs:${this.$attrs.a}`
-          );
+          return h("p", { style: { color: "red" } }, [
+            h("h1", `我是${this.name},今年${this.age}岁了`),
+            h("h2", `我在${this.address},${this.$attrs.a},${this.$attrs.b}`),
+          ]);
         },
       };
 
-      render(
-        h(VueComponent, { address: "杭州", a: 1, b: 2, c: { n: 3 } }),
-        app
-      );
+      // debugger;
+      render(h(VueComponent, { address: "北京市", a: 1, b: 2 }), app);
+
       // render(
       //   h("div", {}, [
       //     h("div", { key: "a", style: { color: "blue" } }, "a"),

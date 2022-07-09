@@ -41,6 +41,7 @@ function toRef(object, key) {
 class ObjectRefImpl {
   constructor(public object, public key) {}
   get value() {
+    // 还是去取原来代理对象上的值，所以会被proxy拦截到
     return this.object[this.key];
   }
   set value(newValue) {

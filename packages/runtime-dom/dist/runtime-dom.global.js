@@ -317,6 +317,7 @@ var VueRuntimeDOM = (() => {
     set(target, key, newVal) {
       const { data, props } = target;
       if (data && hasOwn(data, key)) {
+        console.log(1);
         data[key] = newVal;
         return true;
       } else if (props && hasOwn(props, key)) {
@@ -421,7 +422,6 @@ var VueRuntimeDOM = (() => {
       }
     };
     const unmountChildren = (children) => {
-      console.log(children);
       for (let i = 0; i < children.length; i++) {
         unmount(children[i]);
       }
@@ -580,6 +580,7 @@ var VueRuntimeDOM = (() => {
           }
           const subTree = render3.call(instance.proxy);
           patch(instance.subTree, subTree, container, anchor);
+          instance.subTree = subTree;
         }
       };
       const effect2 = new ReactiveEffect(updateComponent2, () => {
@@ -608,6 +609,7 @@ var VueRuntimeDOM = (() => {
       if (n1 == null) {
         mountComponent(n2, container, anchor);
       } else {
+        console.log(n1, n2);
         updateComponent(n1, n2);
       }
     };
@@ -757,7 +759,7 @@ var VueRuntimeDOM = (() => {
     if (prevValue) {
       for (const key in prevValue) {
         if (!nextValue[key]) {
-          el.style[key] = null;
+          delete el.style[key];
         }
       }
     }

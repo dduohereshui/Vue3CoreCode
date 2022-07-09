@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      let i = 0;
+      let activeEffect = undefined;
+
+      function reactive(target) {
+        const proxy = new Proxy(target, {
+          get(target, key, receiver) {
+            // track
+            console.log(target, key);
+            track(target, "get", key);
+            return Reflect.get(target, key, receiver);
+          },
+          set(target, key, newVal, receiver) {
+            // trigger
+            const oldVal = target[key];
+            const result = Reflect.set(target, key, newVal, receiver);
+            if (oldVal !== newVal) {
+              trigger(target, "set", key);
+            }
+            return result;
+          },
+        });
+        return proxy;
+      }
+      class ReactiveEffect {
+        constructor(fn, scheduler) {
+          this.active = true;
+          this.fn = fn;
+          this.parent = null;
+          this.deps = []; // 该activeEffect被哪些变量依赖
+          this.scheduler = scheduler;
+          this.id = i++;
+        }
+        run() {
+          if (!this.active) return this.fn(); // 非激活状态只需执行函数
+          try {
+            this.parent = activeEffect;
+            activeEffect = this;
+            return this.fn();
+          } finally {
+            activeEffect = this.parent;
+            this.parent = null;
+          }
+        }
+      }
+      function effect(fn, options = {}) {
+        const _effect = new ReactiveEffect(fn, options.scheduler);
+        // 默认执行一次
+        _effect.run();
+        const runner = _effect.run.bind(_effect);
+        runner.effect = _effect;
+        return runner;
+      }
+      const targetMap = new WeakMap();
+
+      function track(target, type, key) {
+        // 只有effect执行时才去track
+        if (!activeEffect) return;
+        let depsMap = targetMap.get(target);
+        if (!depsMap) {
+          targetMap.set(target, (depsMap = new Map()));
+        }
+        let depsSet = depsMap.get(key);
+        if (!depsSet) {
+          depsMap.set(key, (depsSet = new Set()));
+        }
+        trackEffects(depsSet);
+      }
+      function trackEffects(depsSet) {
+        const shouldTrack = !depsSet.has(activeEffect);
+        if (shouldTrack) {
+          depsSet.add(activeEffect);
+          activeEffect.deps.push(depsSet);
+        }
+      }
+      function trigger(target, type, key) {
+        const depsMap = targetMap.get(target);
+        if (!depsMap) return;
+        let effects = depsMap.get(key);
+        triggerEffects(effects);
+      }
+      function triggerEffects(effects) {
+        if (effects) {
+          effects.forEach((effect) => {
+            if (activeEffect !== effect) {
+              if (effect.scheduler) {
+                effect.scheduler();
+              } else {
+                effect.run();
+              }
+            }
+          });
+        }
+      }
+
+      // const state = reactive({
+      //   name: "cjl",
+      //   age: 22,
+      //   gender: "male",
+      //   firstname: "蔡",
+      //   lastname: "杰鲁",
+      // });
+      function toReactive(value) {
+        return typeof value === "object" && value !== null
+          ? reactive(value)
+          : value;
+      }
+      class RefImpl {
+        constructor(rawValue) {
+          this.deps = new Set();
+          this.rawValue = rawValue;
+          this._value = toReactive(rawValue);
+        }
+        get value() {
+          trackEffects(this.deps);
+          return this._value;
+        }
+        set value(newVal) {
+          if (this.rawValue !== newVal) {
+            this._value = toReactive(newVal);
+            this.rawValue = newVal;
+            triggerEffects(this.deps);
+          }
+        }
+      }
+      function ref(target) {
+        return new RefImpl(target);
+      }
+      const nameRef = ref("我是refName");
+
+      effect(() => {
+        app.innerHTML = nameRef.value;
+      });
+
+      setTimeout(() => {
+        nameRef.value = "lalallalal";
+      }, 1500);
+    </script>
+  </body>
+</html>

@@ -74,8 +74,7 @@ export function createRenderer(renderOptions) {
     }
   };
   const unmountChildren = (children: any[]) => {
-    console.log(children);
-
+    // console.log(children);
     for (let i = 0; i < children.length; i++) {
       unmount(children[i]);
     }
@@ -263,7 +262,6 @@ export function createRenderer(renderOptions) {
       patchChildren(n1, n2, container);
     }
   };
-
   const mountComponent = (vnode, container, anchor) => {
     // 1. 创建一个组件实例
     const instance = (vnode.component = createComponentInstance(vnode));
@@ -297,6 +295,8 @@ export function createRenderer(renderOptions) {
         // 更新逻辑
         const subTree = render.call(instance.proxy); // 重新计算得到新树
         patch(instance.subTree, subTree, container, anchor);
+        // 更新现在组件实例上的子组件
+        instance.subTree = subTree;
       }
     };
 
@@ -309,6 +309,7 @@ export function createRenderer(renderOptions) {
     );
 
     const update = (instance.update = effect.run.bind(effect));
+    // 第一次先执行一次，挂载好组件
     update(); // 组件的更新方法
   };
   const shouldUpdateComponent = (n1, n2) => {
@@ -333,6 +334,8 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
+      console.log(n1, n2);
+
       // 组件更新靠的是props，slot等等
       updateComponent(n1, n2);
     }

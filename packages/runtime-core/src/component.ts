@@ -35,6 +35,8 @@ const publicInstanceProxy = {
   set(target, key, newVal) {
     const { data, props } = target;
     if (data && hasOwn(data, key)) {
+      console.log(1);
+
       data[key] = newVal;
       return true;
     } else if (props && hasOwn(props, key)) {
