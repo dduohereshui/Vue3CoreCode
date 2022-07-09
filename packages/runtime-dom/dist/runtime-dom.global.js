@@ -528,7 +528,9 @@ var VueRuntimeDOM = (() => {
           const eventName = "on" + event[0].toUpperCase() + event.slice(1);
           const handler = props[eventName];
           handler && handler(...args);
-        }
+        },
+        attrs: instance.attrs,
+        slots: instance.slots
       };
       const setupResult = setup(instance.props, setupContext);
       if (isFunction(setupResult)) {
