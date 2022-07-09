@@ -141,7 +141,7 @@ export function createRenderer(renderOptions) {
       for (let i = s2; i <= e2; i++) {
         keyToNewIndex.set(c2[i].key, i);
       }
-      console.log(keyToNewIndex);
+      // console.log(keyToNewIndex);
       //
       const toBePatched = e2 - s2 + 1;
       const newIndexToOldIndexMap = new Array(toBePatched).fill(0);
@@ -265,7 +265,7 @@ export function createRenderer(renderOptions) {
   const mountComponent = (vnode, container, anchor) => {
     // 1. 创建一个组件实例
     const instance = (vnode.component = createComponentInstance(vnode));
-    // 2. 给组件实例上的属性赋值
+    // 2. 给组件实例上的属性赋值(处理setup)
     setupComponent(instance);
 
     // 初始化渲染effect
@@ -322,8 +322,6 @@ export function createRenderer(renderOptions) {
   };
   const updateComponent = (n1, n2) => {
     const instance = (n2.component = n1.component); // 组件需要复用的是组件实例
-
-    // updateProps(instance, prevProps, nextProps); // 属性更新
     if (shouldUpdateComponent(n1, n2)) {
       instance.next = n2;
       instance.update();
@@ -334,9 +332,7 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
-      console.log(n1, n2);
-
-      // 组件更新靠的是props，slot等等
+      // 组件更新靠的是props，slot以及组件内响应式数据的更改
       updateComponent(n1, n2);
     }
   };

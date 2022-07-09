@@ -48,3 +48,24 @@ class ObjectRefImpl {
     this.object[this.key] = newValue;
   }
 }
+
+export function proxyRefs(object) {
+  new Proxy(object, {
+    get(target, key, receiver) {
+      let r = Reflect.get(target, key, receiver);
+      if (r.__v_isRef) {
+        return r.value;
+      }
+      return r;
+    },
+    set(target, key, newVal, receiver) {
+      let oldValue = target[key];
+      if (oldValue.__v_isRef) {
+        oldValue.value = newVal;
+        return true;
+      } else {
+        return Reflect.set(target, key, newVal, receiver);
+      }
+    },
+  });
+}

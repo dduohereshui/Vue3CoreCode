@@ -1,5 +1,5 @@
-import { hasOwn } from "@vue/shared";
-import { reactive } from "@vue/reactivity";
+import { hasOwn, isFunction, isObject } from "@vue/shared";
+import { reactive, proxyRefs } from "@vue/reactivity";
 import { initProps } from "./componentProps";
 // 公开属性映射表
 const publicPropertyMap = {
@@ -16,13 +16,16 @@ export function createComponentInstance(vnode) {
     props: {},
     attrs: {},
     proxy: null,
+    setupState: {},
   };
   return instance;
 }
 const publicInstanceProxy = {
   get(target, key) {
-    const { data, props } = target;
-    if (data && hasOwn(data, key)) {
+    const { data, props, setupState } = target;
+    if (setupState && hasOwn(setupState, key)) {
+      return setupState[key];
+    } else if (data && hasOwn(data, key)) {
       return data[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
@@ -33,10 +36,10 @@ const publicInstanceProxy = {
     }
   },
   set(target, key, newVal) {
-    const { data, props } = target;
-    if (data && hasOwn(data, key)) {
-      console.log(1);
-
+    const { data, props, setupState } = target;
+    if (setupState && hasOwn(setupState, key)) {
+      setupState[key] = newVal;
+    } else if (data && hasOwn(data, key)) {
       data[key] = newVal;
       return true;
     } else if (props && hasOwn(props, key)) {
@@ -57,5 +60,27 @@ export function setupComponent(instance) {
     // 给用户传入的数据做响应式
     instance.data = reactive(data.call(instance.proxy));
   }
-  instance.render = type.render;
+  const setup = type.setup;
+  if (setup) {
+    // emit的实现就是发布订阅模式
+    const setupContext = {
+      emit: (event, ...args) => {
+        // onClick emit('click')
+        const eventName = "on" + event[0].toUpperCase() + event.slice(1);
+        // 通过组件props传过来的
+        const handler = props[eventName];
+        handler && handler(...args);
+      },
+    };
+    const setupResult = setup(instance.props, setupContext);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else if (isObject(setupResult)) {
+      // 解包方法
+      instance.setupState = proxyRefs(setupResult);
+    }
+  }
+  if (!instance.render) {
+    instance.render = type.render;
+  }
 }

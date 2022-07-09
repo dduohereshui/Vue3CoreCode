@@ -21,15 +21,26 @@ var VueRuntimeDOM = (() => {
   var src_exports = {};
   __export(src_exports, {
     Fragment: () => Fragment,
+    ReactiveEffect: () => ReactiveEffect,
     Text: () => Text,
+    computed: () => computed,
     createRenderer: () => createRenderer,
+    effect: () => effect,
     h: () => h,
-    render: () => render
+    proxyRefs: () => proxyRefs,
+    reactive: () => reactive,
+    ref: () => ref,
+    render: () => render,
+    toRefs: () => toRefs,
+    watch: () => watch
   });
 
   // packages/shared/src/index.ts
   var isObject = (val) => {
     return typeof val === "object" && val !== null;
+  };
+  var isFunction = (value) => {
+    return typeof value === "function";
   };
   var isNumber = (value) => typeof value === "number";
   var isString = (value) => typeof value === "string";
@@ -153,6 +164,13 @@ var VueRuntimeDOM = (() => {
       }
     }
   };
+  function effect(fn, options = {}) {
+    const _effect = new ReactiveEffect(fn, options.scheduler);
+    _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
+  }
   var targetMap = /* @__PURE__ */ new WeakMap();
   function track(target, type, key) {
     if (!activeEffect)
@@ -223,6 +241,9 @@ var VueRuntimeDOM = (() => {
   };
 
   // packages/reactivity/src/reactive.ts
+  function isReactive(value) {
+    return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+  }
   var reactiveMap = /* @__PURE__ */ new WeakMap();
   function reactive(target) {
     if (!isObject(target))
@@ -236,6 +257,157 @@ var VueRuntimeDOM = (() => {
     const targetProxy = new Proxy(target, mutableHandler);
     reactiveMap.set(target, targetProxy);
     return targetProxy;
+  }
+
+  // packages/reactivity/src/computed.ts
+  var ComputedRefImpl = class {
+    constructor(getter, setter) {
+      this.getter = getter;
+      this.setter = setter;
+      this._dirty = true;
+      this.__v_isReadonly = true;
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this.effect = new ReactiveEffect(this.getter, () => {
+        if (!this._dirty) {
+          this._dirty = true;
+          triggerEffects(this.dep);
+        }
+      });
+    }
+    get value() {
+      trackEffects(this.dep);
+      if (this._dirty) {
+        this._dirty = false;
+        this._value = this.effect.run();
+      }
+      return this._value;
+    }
+    set value(newVal) {
+      this.setter(newVal);
+    }
+  };
+  function computed(getterOptions) {
+    let onlyGetter = isFunction(getterOptions);
+    let getter;
+    let setter;
+    if (onlyGetter) {
+      getter = getterOptions;
+      setter = () => {
+        console.warn("no set");
+      };
+    } else {
+      getter = getterOptions.get;
+      setter = getterOptions.set;
+    }
+    return new ComputedRefImpl(getter, setter);
+  }
+
+  // packages/reactivity/src/watch.ts
+  function traversal(value, set = /* @__PURE__ */ new Set()) {
+    if (!isObject(value))
+      return value;
+    if (set.has(value))
+      return value;
+    set.add(value);
+    for (const key in value) {
+      traversal(value[key], set);
+    }
+    return value;
+  }
+  function watch(source, cb) {
+    let getter;
+    if (isReactive(source)) {
+      getter = () => traversal(source);
+    } else if (isFunction(source)) {
+      getter = source;
+    } else {
+      return "\u4E0D\u662F\u51FD\u6570\u6216\u5BF9\u8C61";
+    }
+    let oldValue;
+    let cleanup;
+    const onCleanUp = (fn) => {
+      cleanup = fn;
+    };
+    const job = () => {
+      if (cleanup) {
+        cleanup();
+      }
+      const newValue = effect2.run();
+      cb(newValue, oldValue, onCleanUp);
+      oldValue = newValue;
+    };
+    const effect2 = new ReactiveEffect(getter, job);
+    oldValue = effect2.run();
+  }
+
+  // packages/reactivity/src/ref.ts
+  function toReactive(value) {
+    return isObject(value) ? reactive(value) : value;
+  }
+  var RefImpl = class {
+    constructor(rawValue) {
+      this.rawValue = rawValue;
+      this.__v_isRef = true;
+      this.dep = /* @__PURE__ */ new Set();
+      this._value = toReactive(rawValue);
+    }
+    get value() {
+      trackEffects(this.dep);
+      return this._value;
+    }
+    set value(newValue) {
+      if (this.rawValue !== newValue) {
+        this._value = toReactive(newValue);
+        this.rawValue = newValue;
+        triggerEffects(this.dep);
+      }
+    }
+  };
+  function ref(value) {
+    return new RefImpl(value);
+  }
+  function toRefs(object) {
+    const result = isArray(object) ? new Array(object.length) : {};
+    for (const key in object) {
+      result[key] = toRef(object, key);
+    }
+    return result;
+  }
+  function toRef(object, key) {
+    return new ObjectRefImpl(object, key);
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+    set value(newValue) {
+      this.object[this.key] = newValue;
+    }
+  };
+  function proxyRefs(object) {
+    new Proxy(object, {
+      get(target, key, receiver) {
+        let r = Reflect.get(target, key, receiver);
+        if (r.__v_isRef) {
+          return r.value;
+        }
+        return r;
+      },
+      set(target, key, newVal, receiver) {
+        let oldValue = target[key];
+        if (oldValue.__v_isRef) {
+          oldValue.value = newVal;
+          return true;
+        } else {
+          return Reflect.set(target, key, newVal, receiver);
+        }
+      }
+    });
   }
 
   // packages/runtime-core/src/componentProps.ts
@@ -297,14 +469,17 @@ var VueRuntimeDOM = (() => {
       propsOptions: vnode.type.props,
       props: {},
       attrs: {},
-      proxy: null
+      proxy: null,
+      setupState: {}
     };
     return instance;
   }
   var publicInstanceProxy = {
     get(target, key) {
-      const { data, props } = target;
-      if (data && hasOwn(data, key)) {
+      const { data, props, setupState } = target;
+      if (setupState && hasOwn(setupState, key)) {
+        return setupState[key];
+      } else if (data && hasOwn(data, key)) {
         return data[key];
       } else if (props && hasOwn(props, key)) {
         return props[key];
@@ -315,9 +490,10 @@ var VueRuntimeDOM = (() => {
       }
     },
     set(target, key, newVal) {
-      const { data, props } = target;
-      if (data && hasOwn(data, key)) {
-        console.log(1);
+      const { data, props, setupState } = target;
+      if (setupState && hasOwn(setupState, key)) {
+        setupState[key] = newVal;
+      } else if (data && hasOwn(data, key)) {
         data[key] = newVal;
         return true;
       } else if (props && hasOwn(props, key)) {
@@ -335,7 +511,25 @@ var VueRuntimeDOM = (() => {
     if (data) {
       instance.data = reactive(data.call(instance.proxy));
     }
-    instance.render = type.render;
+    const setup = type.setup;
+    if (setup) {
+      const setupContext = {
+        emit: (event, ...args) => {
+          const eventName = "on" + event[0].toUpperCase() + event.slice(1);
+          const handler = props[eventName];
+          handler && handler(...args);
+        }
+      };
+      const setupResult = setup(instance.props, setupContext);
+      if (isFunction(setupResult)) {
+        instance.render = setupResult;
+      } else if (isObject(setupResult)) {
+        instance.setupState = proxyRefs(setupResult);
+      }
+    }
+    if (!instance.render) {
+      instance.render = type.render;
+    }
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -474,7 +668,6 @@ var VueRuntimeDOM = (() => {
         for (let i2 = s2; i2 <= e2; i2++) {
           keyToNewIndex.set(c2[i2].key, i2);
         }
-        console.log(keyToNewIndex);
         const toBePatched = e2 - s2 + 1;
         const newIndexToOldIndexMap = new Array(toBePatched).fill(0);
         for (let i2 = s1; i2 <= e1; i2++) {
@@ -609,7 +802,6 @@ var VueRuntimeDOM = (() => {
       if (n1 == null) {
         mountComponent(n2, container, anchor);
       } else {
-        console.log(n1, n2);
         updateComponent(n1, n2);
       }
     };

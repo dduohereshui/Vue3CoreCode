@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text, Fregment, ref, reactive } =
+        VueRuntimeDOM;
+
+      const VueComponent = {
+        setup(props, { emit }) {
+          const name = ref("蔡杰鲁");
+          const age = ref(22);
+          setTimeout(() => {
+            age.value++;
+          }, 1000);
+          return () => {
+            return h("p", { style: { color: "red" } }, [
+              h("h1", `我是${name.value},今年${age.value}岁了`),
+              h(
+                "button",
+                { onClick: () => emit("xxx", "cjl", 20) },
+                "实现emit"
+              ),
+            ]);
+          };
+        },
+      };
+      render(
+        h(VueComponent, {
+          onXxx: (...args) => {
+            console.log(args);
+          },
+        }),
+        app
+      );
+    </script>
+  </body>
+</html>

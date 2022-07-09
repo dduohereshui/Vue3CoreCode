@@ -19,7 +19,7 @@ export function initProps(instance, rawProps) {
       }
     }
   }
-  instance.props = reactive(props);
+  instance.props = reactive(props); // props赋予响应式功能 但是源码中只是shallowReactive
   instance.attrs = attrs;
 }
 export function hasPropsChange(prevProps = {}, nextProps = {}) {
@@ -39,13 +39,10 @@ export function hasPropsChange(prevProps = {}, nextProps = {}) {
 export function updateProps(prevProps, nextProps) {
   // 看属性有没有变化（值，属性个数）
   const isChange = hasPropsChange(prevProps, nextProps);
-  // console.log(prevProps, nextProps);
-
-  // console.log(isChange);
   if (isChange) {
     // 覆盖新属性
     for (const key in nextProps) {
-      prevProps[key] = nextProps[key];
+      prevProps[key] = nextProps[key]; // 重新赋值props中的属性引起页面的更新
     }
     // 删掉多的属性
     for (const key in prevProps) {
