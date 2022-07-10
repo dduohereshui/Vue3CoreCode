@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const {
+        createRenderer,
+        render,
+        h,
+        Text,
+        Fregment,
+        ref,
+        reactive,
+        onBeforeMount,
+        onMounted,
+        onBeforeUpdate,
+        onUpdated,
+        getCurrentInstance,
+      } = VueRuntimeDOM;
+      // onBeforeMount onMounted onBeforeUpdate onUpdated
+
+      const usePassword = () => {
+        const loginState = reactive({
+          username: "caijielu",
+          password: "123456",
+        });
+        onBeforeMount(() => {
+          const instance = getCurrentInstance();
+          console.log("onBeforeMount", instance);
+        });
+        onMounted(() => {
+          const instance = getCurrentInstance();
+          console.log("onMounted", instance);
+        });
+        onBeforeUpdate(() => {
+          const instance = getCurrentInstance();
+          console.log("onBeforeUpdate", instance);
+        });
+        onUpdated(() => {
+          const instance = getCurrentInstance();
+          console.log("onUpdated", instance);
+        });
+        return loginState;
+      };
+
+      const VueComponent = {
+        setup(props, { emit }) {
+          const loginState = usePassword();
+          return () => {
+            return h("p", { style: { color: "red" } }, [
+              h("h1", `我的密码是${loginState.password}`),
+              h(
+                "button",
+                {
+                  onClick: () => {
+                    loginState.password = "000000";
+                  },
+                },
+                "修改密码"
+              ),
+            ]);
+          };
+        },
+      };
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>
