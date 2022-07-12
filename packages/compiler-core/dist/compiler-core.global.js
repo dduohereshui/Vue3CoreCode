@@ -36,6 +36,8 @@ var VueCompilerCore = (() => {
   __export(src_exports, {
     compile: () => compile
   });
+
+  // packages/compiler-core/src/parse.ts
   function createParserContext(template) {
     return {
       line: 1,
@@ -243,8 +245,37 @@ var VueCompilerCore = (() => {
     const root = createRoot(parseChildren(context), getSelection(context, start));
     return root;
   }
+
+  // packages/compiler-core/src/index.ts
+  function transformElement() {
+  }
+  function transformText() {
+  }
+  function transformExpression() {
+  }
+  function createTransformContext(root) {
+    const context = {
+      currentNode: root,
+      parent: null,
+      helpers: /* @__PURE__ */ new Map(),
+      helper(name) {
+        const count = context.helpers.get(name) || 0;
+        context.helpers.set(name, count);
+        return name;
+      },
+      nodeTransforms: [transformElement, transformText, transformExpression]
+    };
+    return context;
+  }
+  function tranverse(context) {
+  }
+  function transform(ast) {
+    const context = createTransformContext(ast);
+    tranverse(context);
+  }
   function compile(template) {
     const ast = parse(template);
+    transform(ast);
     return ast;
   }
   return __toCommonJS(src_exports);
