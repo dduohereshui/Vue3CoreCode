@@ -10,7 +10,7 @@
     <script src="./compiler-core.global.js"></script>
     <script>
       const { compile } = VueCompilerCore;
-      const template = `<img src='xxx'>777</img>`;
+      const template = `<img src='xxx' alt="啦啦啦">777</img><div v-model="aaa"></div>`;
       console.log(compile(template));
     </script>
   </body>

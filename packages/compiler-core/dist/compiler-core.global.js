@@ -219,13 +219,29 @@ var VueCompilerCore = (() => {
       if (!node) {
         node = parseText(context);
       }
+      nodes.forEach((node2, i) => {
+        if (node2.type === 2 /* TEXT */) {
+          if (!/[^\t\r\n\f]/.test(node2.content)) {
+            nodes[i] = null;
+          }
+        }
+      });
       nodes.push(node);
     }
-    return nodes;
+    return nodes.filter(Boolean);
+  }
+  function createRoot(children, loc) {
+    return {
+      type: 0 /* ROOT */,
+      children,
+      loc
+    };
   }
   function parse(template) {
     const context = createParserContext(template);
-    return parseChildren(context);
+    const start = getCursor(context);
+    const root = createRoot(parseChildren(context), getSelection(context, start));
+    return root;
   }
   function compile(template) {
     const ast = parse(template);

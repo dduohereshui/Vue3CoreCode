@@ -44,7 +44,6 @@ function parseTextData(context, endIndex) {
 }
 function getSelection(context, start, end?) {
   end = end || getCursor(context);
-
   return {
     start,
     end,
@@ -215,16 +214,31 @@ function parseChildren(context) {
     if (!node) {
       node = parseText(context);
     }
-
+    nodes.forEach((node, i) => {
+      if (node.type === NodeTypes.TEXT) {
+        if (!/[^\t\r\n\f]/.test(node.content)) {
+          nodes[i] = null;
+        }
+      }
+    });
     nodes.push(node);
     // break;
   }
-  return nodes;
+  return nodes.filter(Boolean);
+}
+function createRoot(children, loc) {
+  return {
+    type: NodeTypes.ROOT,
+    children,
+    loc,
+  };
 }
 function parse(template) {
   // return template;
   const context = createParserContext(template);
-  return parseChildren(context);
+  const start = getCursor(context);
+  const root = createRoot(parseChildren(context), getSelection(context, start));
+  return root;
 }
 export function compile(template) {
   const ast = parse(template);
