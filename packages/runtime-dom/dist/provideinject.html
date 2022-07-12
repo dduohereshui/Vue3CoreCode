@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../dist/runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const {
+        createRenderer,
+        render,
+        h,
+        Text,
+        Fregment,
+        reactive,
+        provide,
+        inject,
+      } = VueRuntimeDOM;
+      const MyComponent = {
+        setup() {
+          // const genderMsg = inject("provideName");
+          const state = reactive({ name: "cjl" });
+          return () => {
+            return h("h1", `injection:${state.name}`);
+          };
+        },
+      };
+
+      const VueComponent = {
+        setup() {
+          // provide("provideName", reactive({gender:'male'}));
+          return () => {
+            return h("p", { style: { color: "red" } }, [
+              h(
+                "button",
+                {
+                  onClick: () => {},
+                },
+                `toggle`
+              ),
+              h(MyComponent),
+            ]);
+          };
+        },
+      };
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>

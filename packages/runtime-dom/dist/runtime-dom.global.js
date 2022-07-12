@@ -29,6 +29,7 @@ var VueRuntimeDOM = (() => {
     createRenderer: () => createRenderer,
     currentInstance: () => currentInstance,
     effect: () => effect,
+    effectScope: () => effectScope,
     getCurrentInstance: () => getCurrentInstance,
     h: () => h,
     onBeforeMount: () => onBeforeMount,
@@ -145,6 +146,52 @@ var VueRuntimeDOM = (() => {
   }
   var currentBlock = null;
 
+  // packages/reactivity/src/effectScope.ts
+  var activeEffectScope = null;
+  var EffectScope = class {
+    constructor(detached) {
+      this.detached = detached;
+      this.active = true;
+      this.parent = null;
+      this.effects = [];
+      this.scopes = [];
+      if (!detached && activeEffectScope) {
+        activeEffectScope.scopes.push(this);
+      }
+    }
+    run(fn) {
+      if (this.active) {
+        try {
+          this.parent = activeEffectScope;
+          activeEffectScope = this;
+          return fn();
+        } finally {
+          activeEffectScope = this.parent;
+          this.parent = null;
+        }
+      }
+    }
+    stop() {
+      if (this.active) {
+        for (let i = 0; i < this.effects.length; i++) {
+          this.effects[i].stop();
+        }
+        for (let i = 0; i < this.scopes.length; i++) {
+          this.scopes[i].stop();
+        }
+        this.active = false;
+      }
+    }
+  };
+  function recordEffectScope(effect2) {
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(effect2);
+    }
+  }
+  function effectScope(detached) {
+    return new EffectScope(detached);
+  }
+
   // packages/reactivity/src/effect.ts
   var activeEffect = void 0;
   function cleanupEffect(effect2) {
@@ -161,7 +208,8 @@ var VueRuntimeDOM = (() => {
       this.active = true;
       this.parent = null;
       this.deps = [];
-      this.active = true;
+      if (activeEffectScope)
+        recordEffectScope(this);
     }
     run() {
       if (!this.active) {
@@ -242,7 +290,6 @@ var VueRuntimeDOM = (() => {
       if (key === "__v_isReactive" /* IS_REACTIVE */) {
         return true;
       }
-      console.log(activeEffect, key, "activeEffect");
       track(target, "get", key);
       let res = Reflect.get(target, key, receiver);
       if (isObject(res)) {
@@ -809,11 +856,11 @@ var VueRuntimeDOM = (() => {
         const { render: render3 } = instance;
         if (!instance.isMounted) {
           const { bm, m } = instance;
-          if (bm.length)
+          if (bm)
             invokeArrayFns(bm);
           const subTree = render3.call(instance.proxy, instance.proxy);
           patch(null, subTree, container, anchor);
-          if (m.length)
+          if (m)
             invokeArrayFns(m);
           instance.subTree = subTree;
           instance.isMounted = true;
@@ -822,11 +869,11 @@ var VueRuntimeDOM = (() => {
           if (next) {
             updateComponentPreRender(instance, next);
           }
-          if (bu.length)
+          if (bu)
             invokeArrayFns(bu);
           const subTree = render3.call(instance.proxy, instance.proxy);
           patch(instance.subTree, subTree, container, anchor);
-          if (u.length)
+          if (u)
             invokeArrayFns(u);
           instance.subTree = subTree;
         }

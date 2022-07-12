@@ -292,13 +292,13 @@ export function createRenderer(renderOptions) {
       if (!instance.isMounted) {
         const { bm, m } = instance;
         // 挂载前，需要掉bm函数
-        if (bm.length) invokeArrayFns(bm);
+        if (bm) invokeArrayFns(bm);
         // 注意，组件是无需挂载的，需要挂载的是组件 render函数返回的vnode，也就是子树
         const subTree = render.call(instance.proxy, instance.proxy); // 使用instance.proxy 是想自定义查找顺序，data，props，attrs
         patch(null, subTree, container, anchor); // 将subTree的真实节点挂载到dom上
 
         // 组件挂载完成
-        if (m.length) invokeArrayFns(m);
+        if (m) invokeArrayFns(m);
 
         instance.subTree = subTree; // 供之后更新用
         instance.isMounted = true;
@@ -308,11 +308,11 @@ export function createRenderer(renderOptions) {
           // 更新前要将新属性进行更改
           updateComponentPreRender(instance, next);
         }
-        if (bu.length) invokeArrayFns(bu);
+        if (bu) invokeArrayFns(bu);
         // 更新逻辑
         const subTree = render.call(instance.proxy, instance.proxy); // 重新计算得到新树
         patch(instance.subTree, subTree, container, anchor);
-        if (u.length) invokeArrayFns(u);
+        if (u) invokeArrayFns(u);
         // 更新现在组件实例上的子组件
         instance.subTree = subTree;
       }
