@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- 官方 -->
+    <!-- <script src="../../../../node_modules/vue/dist/vue.global.js"></script> -->
+    <script src="../../dist/reactivity.global.js"></script>
+    <script>
+      const { ref, effect, reactive, toRefs, toRef, proxyRefs, effectScope } =
+        VueReactivity;
+      // effectScope 在响应式数据在effect中使用时，我们夕阳可以停止依赖收集
+      // effect.stop() 只能停止某一个effect
+
+      const state = reactive({ name: "cjl" });
+
+      const scope = effectScope();
+      scope.run(() => {
+        effect(() => {
+          console.log(state.name, "outer");
+        });
+        // 每一个effectScope都是独立的，外部的取消，内部的不会取消，考虑传入参数标识是否取消effect
+        // 应该外部的effectScope会收集内部的effectScope，外部的取消 内部的也取消
+        const innerScope = effectScope(true);
+        innerScope.run(() => {
+          effect(() => {
+            console.log(state.name, "inner");
+          });
+        });
+      });
+      // 形成一个作用于effect，集中管理其中的effect
+      scope.stop();
+      setTimeout(() => {
+        state.name = "mf";
+      }, 2000);
+    </script>
+  </body>
+</html>

@@ -1,3 +1,4 @@
+import { activeEffectScope, recordEffectScope } from "./effectScope";
 export let activeEffect = undefined;
 function cleanupEffect(effect) {
   const { deps } = effect;
@@ -12,7 +13,9 @@ export class ReactiveEffect {
   public parent = null; // 为了做effect嵌套的activeEffect对应，老版本使用的栈实现
   public deps = []; // activeEffect也要记录有多少属性依赖他
   constructor(public fn, public scheduler?) {
-    this.active = true;
+    // 一执行 effect 作用域effect才会收集这个effect
+    if (activeEffectScope) recordEffectScope(this);
+    // this.active = true;
   }
   run() {
     if (!this.active) {

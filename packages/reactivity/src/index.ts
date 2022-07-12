@@ -3,6 +3,7 @@ import { reactive } from "./reactive";
 import { computed } from "./computed";
 import { watch } from "./watch";
 import { ref, toRefs, proxyRefs } from "./ref";
+import { effectScope } from "./effectScope";
 export {
   effect,
   ReactiveEffect,
@@ -12,4 +13,5 @@ export {
   ref,
   toRefs,
   proxyRefs,
+  effectScope,
 };

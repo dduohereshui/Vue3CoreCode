@@ -11,7 +11,7 @@ export const mutableHandler = {
       return true;
     }
     // effect回调执行，拿到代理对象值渲染到页面，也会走这个get函数
-    console.log(activeEffect, key, "activeEffect");
+    // console.log(activeEffect, key, "activeEffect");
     // 拿到activeEffect，收集依赖
     track(target, "get", key);
     let res = Reflect.get(target, key, receiver);

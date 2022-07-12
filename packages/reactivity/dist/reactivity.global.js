@@ -20,13 +20,62 @@ var VueReactivity = (() => {
   // packages/reactivity/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    ReactiveEffect: () => ReactiveEffect,
     computed: () => computed,
     effect: () => effect,
+    effectScope: () => effectScope,
+    proxyRefs: () => proxyRefs,
     reactive: () => reactive,
     ref: () => ref,
     toRefs: () => toRefs,
     watch: () => watch
   });
+
+  // packages/reactivity/src/effectScope.ts
+  var activeEffectScope = null;
+  var EffectScope = class {
+    constructor(detached) {
+      this.detached = detached;
+      this.active = true;
+      this.parent = null;
+      this.effects = [];
+      this.scopes = [];
+      if (!detached && activeEffectScope) {
+        activeEffectScope.scopes.push(this);
+      }
+    }
+    run(fn) {
+      if (this.active) {
+        try {
+          this.parent = activeEffectScope;
+          activeEffectScope = this;
+          return fn();
+        } finally {
+          activeEffectScope = this.parent;
+          this.parent = null;
+        }
+      }
+    }
+    stop() {
+      if (this.active) {
+        for (let i = 0; i < this.effects.length; i++) {
+          this.effects[i].stop();
+        }
+        for (let i = 0; i < this.scopes.length; i++) {
+          this.scopes[i].stop();
+        }
+        this.active = false;
+      }
+    }
+  };
+  function recordEffectScope(effect2) {
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(effect2);
+    }
+  }
+  function effectScope(detached) {
+    return new EffectScope(detached);
+  }
 
   // packages/reactivity/src/effect.ts
   var activeEffect = void 0;
@@ -44,7 +93,8 @@ var VueReactivity = (() => {
       this.active = true;
       this.parent = null;
       this.deps = [];
-      this.active = true;
+      if (activeEffectScope)
+        recordEffectScope(this);
     }
     run() {
       if (!this.active) {
@@ -134,7 +184,6 @@ var VueReactivity = (() => {
       if (key === "__v_isReactive" /* IS_REACTIVE */) {
         return true;
       }
-      console.log(activeEffect, key, "activeEffect");
       track(target, "get", key);
       let res = Reflect.get(target, key, receiver);
       if (isObject(res)) {
@@ -301,6 +350,26 @@ var VueReactivity = (() => {
       this.object[this.key] = newValue;
     }
   };
+  function proxyRefs(object) {
+    new Proxy(object, {
+      get(target, key, receiver) {
+        let r = Reflect.get(target, key, receiver);
+        if (r.__v_isRef) {
+          return r.value;
+        }
+        return r;
+      },
+      set(target, key, newVal, receiver) {
+        let oldValue = target[key];
+        if (oldValue.__v_isRef) {
+          oldValue.value = newVal;
+          return true;
+        } else {
+          return Reflect.set(target, key, newVal, receiver);
+        }
+      }
+    });
+  }
   return __toCommonJS(src_exports);
 })();
 //# sourceMappingURL=reactivity.global.js.map
