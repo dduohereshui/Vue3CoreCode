@@ -14,8 +14,15 @@ const publicPropertyMap = {
   $attrs: (i) => i.attrs,
   $slots: (i) => i.slots,
 };
+/**
+ *
+ * @param vnode 该组件的虚拟node
+ * @param parent 该组件的父组件
+ * @returns
+ */
 export function createComponentInstance(vnode) {
   const instance = {
+    ctx: {}, // 实例的上下文
     data: null,
     vnode, // 组件
     subTree: null, //渲染组件的内容

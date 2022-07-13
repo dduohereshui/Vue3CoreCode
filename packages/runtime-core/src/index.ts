@@ -6,3 +6,4 @@ export { createRenderer, h, Text, Fragment };
 export * from "@vue/reactivity";
 export * from "./apiLifeCycle";
 export * from "./component";
+export { KeepAliveImpl as KeepAlive } from "./components/KeepAlive";

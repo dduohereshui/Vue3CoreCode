@@ -21,6 +21,7 @@ var VueRuntimeDOM = (() => {
   var src_exports = {};
   __export(src_exports, {
     Fragment: () => Fragment,
+    KeepAlive: () => KeepAliveImpl,
     LifeCycle: () => LifeCycle,
     ReactiveEffect: () => ReactiveEffect,
     Text: () => Text,
@@ -539,6 +540,7 @@ var VueRuntimeDOM = (() => {
   };
   function createComponentInstance(vnode) {
     const instance = {
+      ctx: {},
       data: null,
       vnode,
       subTree: null,
@@ -638,6 +640,66 @@ var VueRuntimeDOM = (() => {
       });
     }
   }
+
+  // packages/runtime-core/src/apiLifeCycle.ts
+  var LifeCycle = /* @__PURE__ */ ((LifeCycle2) => {
+    LifeCycle2["BEFORE_MOUNT"] = "bm";
+    LifeCycle2["MOUNTED"] = "m";
+    LifeCycle2["BEFORE_UPDATE"] = "bu";
+    LifeCycle2["UPDATED"] = "u";
+    return LifeCycle2;
+  })(LifeCycle || {});
+  function createHook(type) {
+    return (hook, target = currentInstance) => {
+      if (target) {
+        const hooks = target[type] || (target[type] = []);
+        const wrappedHook = () => {
+          setCurrentInstance(target);
+          hook();
+          setCurrentInstance(null);
+        };
+        hooks.push(wrappedHook);
+      }
+    };
+  }
+  var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
+  var onMounted = createHook("m" /* MOUNTED */);
+  var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
+  var onUpdated = createHook("u" /* UPDATED */);
+
+  // packages/runtime-core/src/components/KeepAlive.ts
+  var KeepAliveImpl = {
+    __isKeepAlive: true,
+    setup(props, { slots }) {
+      const keys = /* @__PURE__ */ new Set();
+      const cache = /* @__PURE__ */ new Map();
+      const instance = getCurrentInstance();
+      const { createElement, move } = instance.ctx.renderer;
+      const storageContainer = createElement("div");
+      let pendingCacheKey = null;
+      console.log(instance);
+      onMounted(() => {
+        console.log(instance);
+        cache.set(pendingCacheKey, instance.subTree);
+      });
+      return () => {
+        const vnode = slots.default();
+        if (!isVnode(vnode) || !(vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */)) {
+          return vnode;
+        }
+        const comp = vnode.type;
+        const key = vnode.key ? vnode.key : comp;
+        const cacheVnode = cache.get(key);
+        if (cacheVnode) {
+        } else {
+          keys.add(key);
+          pendingCacheKey = key;
+        }
+        return vnode;
+      };
+    }
+  };
+  var isKeepAlive = (vnode) => vnode.type.__isKeepAlive;
 
   // packages/runtime-core/src/renderer.ts
   function createRenderer(renderOptions2) {
@@ -843,6 +905,14 @@ var VueRuntimeDOM = (() => {
     };
     const mountComponent = (vnode, container, anchor) => {
       const instance = vnode.component = createComponentInstance(vnode);
+      if (isKeepAlive(vnode)) {
+        instance.ctx.renderer = {
+          createElement: hostCreateElement,
+          move(vnode2, container2) {
+            hostInsert(vnode2.component.subTree.el, container2);
+          }
+        };
+      }
       setupComponent(instance);
       setupRenderEffect(instance, container, anchor);
     };
@@ -850,6 +920,7 @@ var VueRuntimeDOM = (() => {
       instance.next = null;
       instance.vnode = next;
       updateProps(instance.props, next.props);
+      Object.assign(instance.slots, next.children);
     };
     const setupRenderEffect = (instance, container, anchor) => {
       const updateComponent2 = () => {
@@ -860,10 +931,10 @@ var VueRuntimeDOM = (() => {
             invokeArrayFns(bm);
           const subTree = render3.call(instance.proxy, instance.proxy);
           patch(null, subTree, container, anchor);
-          if (m)
-            invokeArrayFns(m);
           instance.subTree = subTree;
           instance.isMounted = true;
+          if (m)
+            invokeArrayFns(m);
         } else {
           const { next, bu, u } = instance;
           if (next) {
@@ -887,6 +958,8 @@ var VueRuntimeDOM = (() => {
     const shouldUpdateComponent = (n1, n2) => {
       const { props: prevProps } = n1;
       const { props: nextProps } = n2;
+      if (n1.children || n2.children)
+        return true;
       if (prevProps === nextProps)
         return false;
       if (hasPropsChange(prevProps, nextProps)) {
@@ -969,32 +1042,6 @@ var VueRuntimeDOM = (() => {
       return createVnode(type, propsOrChildren, children);
     }
   }
-
-  // packages/runtime-core/src/apiLifeCycle.ts
-  var LifeCycle = /* @__PURE__ */ ((LifeCycle2) => {
-    LifeCycle2["BEFORE_MOUNT"] = "bm";
-    LifeCycle2["MOUNTED"] = "m";
-    LifeCycle2["BEFORE_UPDATE"] = "bu";
-    LifeCycle2["UPDATED"] = "u";
-    return LifeCycle2;
-  })(LifeCycle || {});
-  function createHook(type) {
-    return (hook, target = currentInstance) => {
-      if (target) {
-        const hooks = target[type] || (target[type] = []);
-        const wrappedHook = () => {
-          setCurrentInstance(target);
-          hook();
-          setCurrentInstance(null);
-        };
-        hooks.push(wrappedHook);
-      }
-    };
-  }
-  var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
-  var onMounted = createHook("m" /* MOUNTED */);
-  var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
-  var onUpdated = createHook("u" /* UPDATED */);
 
   // packages/runtime-dom/src/nodeOps.ts
   var nodeOps = {

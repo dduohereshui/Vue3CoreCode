@@ -5,6 +5,7 @@ import { createComponentInstance, setupComponent } from "./component";
 import { ReactiveEffect } from "@vue/reactivity";
 import { queueJob } from "./scheduler";
 import { hasPropsChange, updateProps } from "./componentProps";
+import { isKeepAlive } from "./components/KeepAlive";
 
 export function createRenderer(renderOptions) {
   const {
@@ -274,6 +275,15 @@ export function createRenderer(renderOptions) {
   const mountComponent = (vnode, container, anchor) => {
     // 1. 创建一个组件实例
     const instance = (vnode.component = createComponentInstance(vnode));
+    if (isKeepAlive(vnode)) {
+      (instance.ctx as any).renderer = {
+        createElement: hostCreateElement,
+        move(vnode, container) {
+          // move的肯定是组件
+          hostInsert(vnode.component.subTree.el, container);
+        },
+      };
+    }
     // 2. 给组件实例上的属性赋值(处理setup)
     setupComponent(instance);
 
@@ -284,6 +294,9 @@ export function createRenderer(renderOptions) {
     instance.next = null;
     instance.vnode = next;
     updateProps(instance.props, next.props);
+    // 更新插槽
+    // instance.slots = next.children;
+    Object.assign(instance.slots, next.children);
   };
   const setupRenderEffect = (instance, container, anchor) => {
     const updateComponent = () => {
@@ -297,11 +310,10 @@ export function createRenderer(renderOptions) {
         const subTree = render.call(instance.proxy, instance.proxy); // 使用instance.proxy 是想自定义查找顺序，data，props，attrs
         patch(null, subTree, container, anchor); // 将subTree的真实节点挂载到dom上
 
-        // 组件挂载完成
-        if (m) invokeArrayFns(m);
-
         instance.subTree = subTree; // 供之后更新用
         instance.isMounted = true;
+        // 组件挂载完成
+        if (m) invokeArrayFns(m);
       } else {
         const { next, bu, u } = instance;
         if (next) {
@@ -333,6 +345,7 @@ export function createRenderer(renderOptions) {
   const shouldUpdateComponent = (n1, n2) => {
     const { props: prevProps } = n1;
     const { props: nextProps } = n2;
+    if (n1.children || n2.children) return true;
     if (prevProps === nextProps) return false;
     if (hasPropsChange(prevProps, nextProps)) {
       return true;

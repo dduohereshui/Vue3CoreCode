@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../dist/runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      const {
+        createRenderer,
+        render,
+        h,
+        Text,
+        Fregment,
+        onMounted,
+        KeepAlive,
+      } = VueRuntimeDOM;
+
+      const My1 = {
+        setup() {
+          onMounted(() => {
+            console.log("My1");
+          });
+          return () => {
+            return h("h1", "woshimy1");
+          };
+        },
+      };
+      const My2 = {
+        setup() {
+          onMounted(() => {
+            console.log("My2");
+          });
+          return () => {
+            return h("h1", "woshimy2");
+          };
+        },
+      };
+      const KeepAliveCom = {
+        render() {
+          return h(KeepAlive, null, {
+            default: () => h(My1),
+          });
+        },
+      };
+      render(h(KeepAliveCom), app);
+    </script>
+  </body>
+</html>
