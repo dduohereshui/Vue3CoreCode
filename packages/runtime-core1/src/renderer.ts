@@ -1,3 +1,5 @@
+import { ShapeFlags } from "@vue/shared";
+
 export function createRenderer(renderOptions) {
   // 通过传入的渲染器选项进行渲染
   const {
@@ -9,7 +11,53 @@ export function createRenderer(renderOptions) {
     remove: hostRemove,
     setText: hostSetText,
   } = renderOptions;
-  const render = (vnode, container) => {};
+  // 挂载儿子
+  const mountChildren = (children, container) => {
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      patch(null, child, container);
+    }
+  };
+  const mountElement = (vnode, container) => {
+    const { type, props, children, shapeFlag } = vnode;
+    // 虚拟节点的el属性赋值，后续用于复用节点和更新
+    const el = (vnode.el = hostCreateElement(type));
+    // 属性赋值
+    if (props) {
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key]);
+      }
+    }
+    // 下面开始挂载子节点
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 儿子是一个文本
+      hostSetElementText(el, children);
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      mountChildren(children, el);
+    }
+
+    hostInsert(el, container); // 将节点插入到容器中
+  };
+  // 核心方法
+  const patch = (n1, n2, container) => {
+    if (n1 == n2) return;
+    if (n1 == null) {
+      // 挂载流程
+      mountElement(n2, container);
+    } else {
+      // 更新流程
+    }
+  };
+  const render = (vnode, container) => {
+    // console.log(vnode, container);
+    if (vnode == null) {
+      // vnode为空，卸载
+    } else {
+      // 第一次渲染，container._vnode为null，走挂载流程，之后渲染，container._vnode不为null，走更新流程
+      patch(container._vnode || null, vnode, container);
+    }
+    container._vnode = vnode;
+  };
   return {
     render,
   };
