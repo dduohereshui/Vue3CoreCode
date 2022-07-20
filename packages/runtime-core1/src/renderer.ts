@@ -16,16 +16,17 @@ export function createRenderer(renderOptions) {
    * @param child
    * @returns
    */
-  const normalize = (child) => {
-    if (isString(child)) {
-      return createVNode(Text, null, child);
+  const normalize = (children, i) => {
+    if (isString(children[i])) {
+      const vnode = createVNode(Text, null, children[i]);
+      children[i] = vnode;
     }
-    return child;
+    return children[i];
   };
   // 挂载儿子
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
-      const child = normalize(children[i]);
+      const child = normalize(children, i);
       patch(null, child, container);
     }
   };
@@ -66,6 +67,20 @@ export function createRenderer(renderOptions) {
       }
     }
   };
+  const unmountChildren = (children) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i]);
+    }
+  };
+  /**
+   * diff算法
+   * @param c1
+   * @param c2
+   * @param el
+   */
+  const patchKeyedChildren = (c1, c2, el) => {
+    debugger;
+  };
   /**
    * 比较虚拟节点儿子的差异（diff算法）
    * @param n1
@@ -75,6 +90,41 @@ export function createRenderer(renderOptions) {
   const patchChildren = (n1, n2, el) => {
     const c1 = n1.children;
     const c2 = n2.children;
+    // 新老节点都有三种情况 文本 数组 null
+    const prevShapeFlag = n1.shapeFlag;
+    const shapeFlag = n2.shapeFlag;
+
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 新的儿子是文本
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 老的儿子是数组
+        unmountChildren(c1);
+      }
+      // 老的儿子是文本
+      if (c1 !== c2) {
+        hostSetElementText(el, c2);
+      }
+    } else {
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 老的儿子是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // 新的儿子是数组 （diff算法）
+          patchKeyedChildren(c1, c2, el); // 比较数组的差异 diff 算法
+        } else {
+          // 新的儿子是文本或者null
+          unmountChildren(c1);
+        }
+      } else {
+        // 老的儿子是文本或者null
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          hostSetElementText(el, "");
+        }
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // 新的儿子是数组
+          mountChildren(c2, el);
+        }
+      }
+    }
   };
   /**
    * vue3的diff算法入口
