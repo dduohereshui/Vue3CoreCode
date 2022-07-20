@@ -1,4 +1,6 @@
 import { isArray, isString, ShapeFlags } from "@vue/shared";
+// text类型
+export const Text = Symbol("TEXT");
 /**
  * @param value any
  * @returns

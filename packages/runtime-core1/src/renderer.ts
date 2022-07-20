@@ -1,5 +1,5 @@
-import { ShapeFlags } from "@vue/shared";
-
+import { isString, ShapeFlags } from "@vue/shared";
+import { createVNode, Text } from "./vnode";
 export function createRenderer(renderOptions) {
   // 通过传入的渲染器选项进行渲染
   const {
@@ -11,10 +11,21 @@ export function createRenderer(renderOptions) {
     remove: hostRemove,
     setText: hostSetText,
   } = renderOptions;
+  /**
+   * 同步Text节点的文本内容，使其和其他vnode保持一致
+   * @param child
+   * @returns
+   */
+  const normalize = (child) => {
+    if (isString(child)) {
+      return createVNode(Text, null, child);
+    }
+    return child;
+  };
   // 挂载儿子
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
-      const child = children[i];
+      const child = normalize(children[i]);
       patch(null, child, container);
     }
   };
@@ -38,20 +49,42 @@ export function createRenderer(renderOptions) {
 
     hostInsert(el, container); // 将节点插入到容器中
   };
+  const processText = (n1, n2, container) => {
+    if (n1 == null) {
+      // 文本第一次挂载
+      const el = (n2.el = hostCreateText(n2.children));
+      hostInsert(el, container);
+    } else {
+      // 文本更新
+    }
+  };
   // 核心方法
   const patch = (n1, n2, container) => {
+    const { type, shapeFlag } = n2;
     if (n1 == n2) return;
     if (n1 == null) {
       // 挂载流程
-      mountElement(n2, container);
+      switch (type) {
+        case Text:
+          processText(n1, n2, container);
+          break;
+        default:
+          if (shapeFlag & ShapeFlags.ELEMENT) {
+            mountElement(n2, container);
+          }
+      }
     } else {
       // 更新流程
     }
+  };
+  const unmount = (vnode) => {
+    hostRemove(vnode.el);
   };
   const render = (vnode, container) => {
     // console.log(vnode, container);
     if (vnode == null) {
       // vnode为空，卸载
+      if (container._vnode) unmount(container._vnode);
     } else {
       // 第一次渲染，container._vnode为null，走挂载流程，之后渲染，container._vnode不为null，走更新流程
       patch(container._vnode || null, vnode, container);
