@@ -8,6 +8,9 @@ export const Text = Symbol("TEXT");
 export function isVnode(value) {
   return value ? value._v_isVnode === true : false;
 }
+export function isSameVNode(n1, n2) {
+  return n1.type === n2.type && n1.key === n2.key;
+}
 /**
  * @param type 虚拟节点的类型 例如：'div','span'
  * @param props 虚拟节点上的属性
