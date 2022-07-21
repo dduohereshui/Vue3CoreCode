@@ -146,7 +146,6 @@ export function createRenderer(renderOptions) {
         }
       }
     }
-
     //乱序比对
     /**
      *  a b c d e   f g
@@ -154,6 +153,42 @@ export function createRenderer(renderOptions) {
      * 经过上面的优化，i:2 e1:4 e2:5
      * c1中下标2～4 c2中下标2～5 互为乱序
      */
+    // 新列表做一个映射表，去老列表里面寻找
+    console.log(i, e1, e2);
+    const keyToNewIndexMap = new Map();
+    let s1 = i;
+    let s2 = i; //新列表开始位置 2 ~ 5
+    for (let i = s2; i <= e2; i++) {
+      keyToNewIndexMap.set(c2[i].key, i); // 将新列表的key和下标映射到表中
+    }
+    console.log(keyToNewIndexMap); // {'e' => 2, 'c' => 3, 'd' => 4, 'h' => 5}
+    const toBePatched = e2 - s2 + 1; // 待更新的节点长度(也就是s2～e2之间的节点)
+    const newIndexToNewIndexArr = new Array(toBePatched).fill(0); // 记录新列表的key有没有在老列表中找到
+    // 循环老列表，寻找老节点的key在Map中的位置，有的话就patch，没有就卸载
+    for (let i = s1; i <= e1; i++) {
+      const oldChild = c1[i];
+      const newIndex = keyToNewIndexMap.get(oldChild.key);
+      if (newIndex) {
+        newIndexToNewIndexArr[newIndex - s2] = i + 1;
+        patch(oldChild, c2[newIndex], el);
+      } else {
+        // 老的有新的没有，卸载老的
+        unmount(oldChild);
+      }
+    }
+    console.log(newIndexToNewIndexArr); //[5, 3, 4, 0]
+    for (let i = toBePatched - 1; i >= 0; i--) {
+      const lastIndex = i + s2;
+      const current = c2[lastIndex];
+      const anchor = lastIndex + 1 < c2.length ? c2[lastIndex + 1].el : null;
+      if (newIndexToNewIndexArr[i] === 0) {
+        // 该元素在老列表中不存在，需要重新创建
+        patch(null, current, el, anchor);
+      } else {
+        // 复用原来的节点，倒序插入
+        hostInsert(current.el, el, anchor);
+      }
+    }
   };
   /**
    * 比较虚拟节点儿子的差异（diff算法）
