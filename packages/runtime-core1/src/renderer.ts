@@ -30,7 +30,7 @@ export function createRenderer(renderOptions) {
       patch(null, child, container);
     }
   };
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     const { type, props, children, shapeFlag } = vnode;
     // 虚拟节点的el属性赋值，后续用于复用节点和更新
     const el = (vnode.el = hostCreateElement(type));
@@ -48,7 +48,7 @@ export function createRenderer(renderOptions) {
       mountChildren(children, el);
     }
 
-    hostInsert(el, container); // 将节点插入到容器中
+    hostInsert(el, container, anchor); // 将节点插入到容器中
   };
   /**
    * 元素属性的patch
@@ -63,7 +63,7 @@ export function createRenderer(renderOptions) {
     for (const key in oldProps) {
       // 老的里有，但是新的没有
       if (newProps[key] == null) {
-        hostPatchProp(el, key, oldProps[key], null);
+        hostPatchProp(el, key, oldProps[key], undefined);
       }
     }
   };
@@ -79,7 +79,81 @@ export function createRenderer(renderOptions) {
    * @param el
    */
   const patchKeyedChildren = (c1, c2, el) => {
-    debugger;
+    let i = 0;
+    let e1 = c1.length - 1;
+    let e2 = c2.length - 1;
+    /* i = 0 e1 = 2 e2 = 3
+     * a b c
+     * a b d e
+     */
+    // sync from start
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[i];
+      const n2 = c2[i];
+      if (isSameVNode(n1, n2)) {
+        patch(n1, n2, el); // key和type一样，就去递归patch
+      } else {
+        break;
+      }
+      i++;
+    }
+    // sync from end
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[e1];
+      const n2 = c2[e2];
+      if (isSameVNode(n1, n2)) {
+        patch(n1, n2, el);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+    /**
+     * i:0     e1:2     e2:4
+     * 经过上面的对比 i:3 e1:2 e2: 4
+     * a b c
+     * a b c d e
+     * 有新增，新增的是i～e2之间的节点 挂载新节点
+     */
+    // common sequence mount
+    if (i > e1) {
+      if (i <= e2) {
+        while (i <= e2) {
+          // 判断一下插入前面还是后面
+          const nextPos = e2 + 1;
+          const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+          patch(null, c2[i], el, anchor);
+          i++;
+        }
+      }
+    }
+
+    // 有需要卸载的
+    /**
+     * i > e2 && i <= e1
+     * a b c
+     * a b
+     * i:2 e1:2 e2:1
+     * 卸载i～e1之间的节点
+     */
+    // common sequence unmount
+    if (i > e2) {
+      if (i <= e1) {
+        while (i <= e1) {
+          unmount(c1[i]);
+          i++;
+        }
+      }
+    }
+
+    //乱序比对
+    /**
+     *  a b c d e   f g
+     *  a b e c d h f g
+     * 经过上面的优化，i:2 e1:4 e2:5
+     * c1中下标2～4 c2中下标2～5 互为乱序
+     */
   };
   /**
    * 比较虚拟节点儿子的差异（diff算法）
@@ -155,17 +229,17 @@ export function createRenderer(renderOptions) {
       }
     }
   };
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor) => {
     if (n1 == null) {
       // 元素挂载
-      mountElement(n2, container);
+      mountElement(n2, container, anchor);
     } else {
       // patch元素
       patchElement(n1, n2);
     }
   };
   // 核心方法
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor = null) => {
     if (n1 == n2) return;
     if (n1 && !isSameVNode(n1, n2)) {
       // 前后都不是一个节点，则删除n1的节点，并挂载n2的节点
@@ -179,7 +253,7 @@ export function createRenderer(renderOptions) {
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container);
+          processElement(n1, n2, container, anchor);
         }
     }
   };
