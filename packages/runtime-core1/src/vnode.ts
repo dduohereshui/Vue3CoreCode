@@ -1,4 +1,4 @@
-import { isArray, isString, ShapeFlags } from "@vue/shared";
+import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
 // text类型
 export const Text = Symbol("TEXT");
 // Fragment类型
@@ -20,7 +20,11 @@ export function isSameVNode(n1, n2) {
  */
 export function createVNode(type, props, children?) {
   // type是一个字符串，就代表是一个标签 如div
-  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+  let shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT // type是对象，就是一个组件
+    : 0;
   // 虚拟节点
   const vnode = {
     _v_isVnode: true,

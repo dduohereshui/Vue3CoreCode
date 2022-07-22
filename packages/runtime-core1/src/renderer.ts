@@ -1,5 +1,7 @@
+import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { isString, ShapeFlags } from "@vue/shared";
 import { getSequence } from "./getSequence";
+import { queueJob } from "./scheduler";
 import { createVNode, isSameVNode, Text, Fragment } from "./vnode";
 export function createRenderer(renderOptions) {
   // 通过传入的渲染器选项进行渲染
@@ -50,6 +52,44 @@ export function createRenderer(renderOptions) {
     }
 
     hostInsert(el, container, anchor); // 将节点插入到容器中
+  };
+  const mountComponent = (vnode, container, anchor) => {
+    const { data = () => {}, render } = vnode.type;
+    // console.log(data, render);
+    const state = reactive(data());
+    console.log(state);
+    // 创建组件实例
+    const instance = {
+      state,
+      vnode,
+      subTree: null, // 组件真实渲染的内容 就是render函数返回的vnode
+      isMounted: false,
+      update: null,
+    };
+    // 组件的渲染方法
+    const componentUpdateFn = () => {
+      if (!instance.isMounted) {
+        //组件 挂载
+        console.log("组件挂载");
+        const subTree = render.call(state); // 这里组件里用到的值会去收集依赖
+        // console.log(subTree);
+        patch(null, subTree, container, anchor);
+        instance.subTree = subTree;
+        instance.isMounted = true;
+      } else {
+        //组件更新
+        console.log("组件更新");
+        const subTree = render.call(state);
+        patch(instance.subTree, subTree, container, anchor);
+        instance.subTree = subTree;
+      }
+    };
+    const effect = new ReactiveEffect(componentUpdateFn, () =>
+      queueJob(instance.update)
+    ); // schedule调度缓存更新状态
+    // instance挂一个强制更新的update方法
+    const update = (instance.update = effect.run.bind(effect));
+    update();
   };
   /**
    * 元素属性的patch
@@ -289,6 +329,12 @@ export function createRenderer(renderOptions) {
       patchElement(n1, n2);
     }
   };
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountComponent(n2, container, anchor);
+    } else {
+    }
+  };
   // 核心方法
   const patch = (n1, n2, container, anchor = null) => {
     if (n1 == n2) return;
@@ -308,6 +354,8 @@ export function createRenderer(renderOptions) {
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor);
         }
     }
   };
