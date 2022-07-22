@@ -1,4 +1,5 @@
 import { isString, ShapeFlags } from "@vue/shared";
+import { getSequence } from "./getSequence";
 import { createVNode, isSameVNode, Text } from "./vnode";
 export function createRenderer(renderOptions) {
   // 通过传入的渲染器选项进行渲染
@@ -177,6 +178,10 @@ export function createRenderer(renderOptions) {
       }
     }
     console.log(newIndexToNewIndexArr); //[5, 3, 4, 0]
+
+    const sequence = getSequence(newIndexToNewIndexArr); //[1,2]
+    console.log(sequence);
+    let j = sequence.length - 1; //
     for (let i = toBePatched - 1; i >= 0; i--) {
       const lastIndex = i + s2;
       const current = c2[lastIndex];
@@ -185,8 +190,12 @@ export function createRenderer(renderOptions) {
         // 该元素在老列表中不存在，需要重新创建
         patch(null, current, el, anchor);
       } else {
-        // 复用原来的节点，倒序插入
-        hostInsert(current.el, el, anchor);
+        if (i !== sequence[j]) {
+          // 复用原来的节点，倒序插入
+          hostInsert(current.el, el, anchor);
+        } else {
+          j--;
+        }
       }
     }
   };
