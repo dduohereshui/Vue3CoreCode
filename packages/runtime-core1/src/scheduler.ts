@@ -10,9 +10,9 @@ export function queueJob(job) {
     resolvepromise.then(() => {
       // 开一个promise，例如页面上 this.name = 'a' this.age++ ,那么就会等都更改完再去执行更新
       const copy = queue.slice();
+      queue.length = 0;
       copy.forEach((job) => job());
       isflushing = false;
-      queue.length = 0;
       copy.length = 0;
     });
   }
