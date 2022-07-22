@@ -1,6 +1,6 @@
-import { reactive, ReactiveEffect } from "@vue/reactivity";
-import { hasOwn, isString, ShapeFlags } from "@vue/shared";
-import { initProps } from "./componentProps";
+import { ReactiveEffect } from "@vue/reactivity";
+import { isString, ShapeFlags } from "@vue/shared";
+import { createComponentInstance, setupComponent } from "./component";
 import { getSequence } from "./getSequence";
 import { queueJob } from "./scheduler";
 import { createVNode, isSameVNode, Text, Fragment } from "./vnode";
@@ -55,59 +55,19 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor); // 将节点插入到容器中
   };
   const mountComponent = (vnode, container, anchor) => {
-    const { data = () => {}, render, props: propsOptions = {} } = vnode.type;
-    // console.log(data, render);
-    const state = reactive(data());
     // 创建组件实例
-    const instance = {
-      state,
-      vnode,
-      subTree: null, // 组件真实渲染的内容 就是render函数返回的vnode
-      isMounted: false,
-      update: null,
-      propsOptions, //用户的props选项
-      props: {},
-      attrs: {},
-      proxy: null, //渲染上下文，模板中用的data props attrs都是这里来的
-    };
-    // vnode上的props是往组件上传的属性
-    initProps(instance, vnode.props);
-    console.log(instance);
-    const publicPropertyMap = {
-      $attrs: (instance) => instance.attrs,
-    };
-    instance.proxy = new Proxy(instance, {
-      get(target, key) {
-        const { state, props } = target;
-        if (state && hasOwn(state, key)) {
-          return state[key];
-        } else if (props && hasOwn(props, key)) {
-          return props[key];
-        }
-        // this.$attrs.a
-        const getter = publicPropertyMap[key];
-        if (getter) {
-          return getter(target);
-        }
-      },
-      set(target, key, value) {
-        const { state, props } = target;
-        if (state && hasOwn(state, key)) {
-          state[key] = value;
-          return true;
-        } else if (props && hasOwn(props, key)) {
-          console.warn("Setting props as state is not supported.");
-          return false;
-        }
-        return true;
-      },
-    });
-    // 组件的渲染方法
+    const instance = createComponentInstance(vnode);
+    // 实例上属性赋值
+    setupComponent(instance);
+    // 给组件添加响应式（组件的渲染与更新函数）
+    setupRenderEffect(instance, container, anchor);
+  };
+  const setupRenderEffect = (instance, container, anchor) => {
+    const { render } = instance;
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
         //组件 挂载
         console.log("组件挂载");
-
         const subTree = render.call(instance.proxy); // 这里组件里用到的值会去收集依赖
         patch(null, subTree, container, anchor);
         instance.subTree = subTree;
