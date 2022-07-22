@@ -1,6 +1,6 @@
 import { isString, ShapeFlags } from "@vue/shared";
 import { getSequence } from "./getSequence";
-import { createVNode, isSameVNode, Text } from "./vnode";
+import { createVNode, isSameVNode, Text, Fragment } from "./vnode";
 export function createRenderer(renderOptions) {
   // 通过传入的渲染器选项进行渲染
   const {
@@ -273,6 +273,13 @@ export function createRenderer(renderOptions) {
       }
     }
   };
+  const processFragment = (n1, n2, container) => {
+    if (n1 == null) {
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
+    }
+  };
   const processElement = (n1, n2, container, anchor) => {
     if (n1 == null) {
       // 元素挂载
@@ -294,6 +301,9 @@ export function createRenderer(renderOptions) {
     switch (type) {
       case Text:
         processText(n1, n2, container);
+        break;
+      case Fragment:
+        processFragment(n1, n2, container);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {

@@ -1,6 +1,8 @@
 import { isArray, isString, ShapeFlags } from "@vue/shared";
 // text类型
 export const Text = Symbol("TEXT");
+// Fragment类型
+export const Fragment = Symbol("FRAGMENT");
 /**
  * @param value any
  * @returns
