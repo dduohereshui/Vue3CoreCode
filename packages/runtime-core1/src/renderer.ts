@@ -1,6 +1,11 @@
 import { ReactiveEffect } from "@vue/reactivity";
-import { isString, ShapeFlags } from "@vue/shared";
-import { createComponentInstance, setupComponent } from "./component";
+import { isNumber, isString, ShapeFlags } from "@vue/shared";
+import {
+  createComponentInstance,
+  hasPropsChange,
+  setupComponent,
+  updateProps,
+} from "./component";
 import { getSequence } from "./getSequence";
 import { queueJob } from "./scheduler";
 import { createVNode, isSameVNode, Text, Fragment } from "./vnode";
@@ -21,7 +26,7 @@ export function createRenderer(renderOptions) {
    * @returns
    */
   const normalize = (children, i) => {
-    if (isString(children[i])) {
+    if (isString(children[i]) || isNumber(children[i])) {
       const vnode = createVNode(Text, null, children[i]);
       children[i] = vnode;
     }
@@ -55,13 +60,51 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor); // 将节点插入到容器中
   };
   const mountComponent = (vnode, container, anchor) => {
-    // 创建组件实例
-    const instance = createComponentInstance(vnode);
+    // 创建组件实例 (并且给vnode挂载一个component属性，对应这一次的组件实例)
+    const instance = (vnode.component = createComponentInstance(vnode));
     // 实例上属性赋值
     setupComponent(instance);
     // 给组件添加响应式（组件的渲染与更新函数）
     setupRenderEffect(instance, container, anchor);
   };
+  const shouldUpdateComponent = (n1, n2): boolean => {
+    const { props: prevProps, children: prevSlots } = n1; // 组件上传的props
+    const { props: nextProps, children: nextSlots } = n2; // 组件上传的props
+    if (prevProps === nextProps) return false;
+    if (prevSlots || nextSlots) {
+      return true;
+    }
+    if (hasPropsChange(prevProps, nextProps)) {
+      return true;
+    }
+    // updateProps(instance, prevProps, nextProps); // 更新props
+  };
+  // 两个组件vnode的patch函数
+  const updateComponent = (n1, n2) => {
+    const instance = (n2.component = n1.component); // 组件复用实例
+    // 需要更新的时候去update props slots等
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2;
+      instance.update(); // 更新组件
+    }
+  };
+  /**
+   * 组件真正更新前，先更新props slots等
+   * @param instance 组件实例
+   * @param next 组件vnode
+   */
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null;
+    instance.vnode = next;
+    // 更新props instance上的props是上一次的props，next.props是最新传的props
+    updateProps(instance.props, next.props);
+  };
+  /**
+   * 组件初次渲染以及后续更新的函数，原理就是effect
+   * @param instance
+   * @param container
+   * @param anchor
+   */
   const setupRenderEffect = (instance, container, anchor) => {
     const { render } = instance;
     const componentUpdateFn = () => {
@@ -74,9 +117,14 @@ export function createRenderer(renderOptions) {
         instance.isMounted = true;
       } else {
         //组件更新
-        console.log("组件更新");
-        const subTree = render.call(instance.proxy);
-        patch(instance.subTree, subTree, container, anchor);
+        const { next } = instance; // next是组件props或slots更新时在实例上挂的值，执行instance.update时可以拿到
+        if (next) {
+          // 更新props和slots
+          updateComponentPreRender(instance, next);
+        }
+        console.log("组件更新", instance);
+        const subTree = render.call(instance.proxy); // 这里组件里用到的值也会去收集依赖
+        patch(instance.subTree, subTree, container, anchor); // 走diff等操作
         instance.subTree = subTree;
       }
     };
@@ -191,14 +239,14 @@ export function createRenderer(renderOptions) {
      * c1中下标2～4 c2中下标2～5 互为乱序
      */
     // 新列表做一个映射表，去老列表里面寻找
-    console.log(i, e1, e2);
+    // console.log(i, e1, e2);
     const keyToNewIndexMap = new Map();
     let s1 = i;
     let s2 = i; //新列表开始位置 2 ~ 5
     for (let i = s2; i <= e2; i++) {
       keyToNewIndexMap.set(c2[i].key, i); // 将新列表的key和下标映射到表中
     }
-    console.log(keyToNewIndexMap); // {'e' => 2, 'c' => 3, 'd' => 4, 'h' => 5}
+    // console.log(keyToNewIndexMap); // {'e' => 2, 'c' => 3, 'd' => 4, 'h' => 5}
     const toBePatched = e2 - s2 + 1; // 待更新的节点长度(也就是s2～e2之间的节点)
     const newIndexToNewIndexArr = new Array(toBePatched).fill(0); // 记录新列表的key有没有在老列表中找到
     // 循环老列表，寻找老节点的key在Map中的位置，有的话就patch，没有就卸载
@@ -213,10 +261,9 @@ export function createRenderer(renderOptions) {
         unmount(oldChild);
       }
     }
-    console.log(newIndexToNewIndexArr); //[5, 3, 4, 0]
+    // console.log(newIndexToNewIndexArr); //[5, 3, 4, 0]
 
     const sequence = getSequence(newIndexToNewIndexArr); //[1,2]
-    console.log(sequence);
     let j = sequence.length - 1; //
     for (let i = toBePatched - 1; i >= 0; i--) {
       const lastIndex = i + s2;
@@ -329,6 +376,8 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
+      // 组件更新靠的是props和插槽
+      updateComponent(n1, n2);
     }
   };
   // 核心方法

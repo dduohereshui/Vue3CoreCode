@@ -22,6 +22,7 @@ const publicPropertyMap = {
 };
 const publicInstanceProxy = {
   get(target, key) {
+    // 对于data 会进行收集依赖
     const { data, props } = target;
     if (data && hasOwn(data, key)) {
       return data[key];
@@ -51,12 +52,45 @@ export function setupComponent(instance) {
   const { props, type } = instance.vnode;
 
   initProps(instance, props);
+
   instance.proxy = new Proxy(instance, publicInstanceProxy);
 
   const { data, render } = type;
   if (data && isFunction(data)) {
+    // 用户使用的data就是一个赋予了响应式功能的对象
     instance.data = reactive(data.call(instance.proxy));
   }
   // 实例上挂载render方法，template解析成的方法
   instance.render = render;
+}
+
+export function updateProps(prevProps, nextProps) {
+  // 组件props更新与否从两个维度判断  props长度以及值是否相等
+  if (hasPropsChange(prevProps, nextProps)) {
+    // console.log("更新了");
+    for (const key in nextProps) {
+      //因为复用了老的instance，所以实例上拥有props属性，并且props属性是一个响应式对象
+      prevProps[key] = nextProps[key];
+    }
+    // 删掉之前有的但是现在没有的
+    for (const key in prevProps) {
+      if (!hasOwn(nextProps, key)) {
+        delete prevProps[key];
+      }
+    }
+  }
+}
+
+export function hasPropsChange(prevProps = {}, nextProps = {}): boolean {
+  const nextKeys = Object.keys(nextProps);
+  if (nextKeys.length !== Object.keys(prevProps).length) {
+    return true; // 表示props发生了变化
+  }
+  for (let i = 0; i < nextKeys.length; i++) {
+    const key = nextKeys[i];
+    if (nextProps[key] !== prevProps[key]) {
+      return true;
+    }
+  }
+  return false;
 }
