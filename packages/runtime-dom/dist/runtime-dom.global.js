@@ -23,6 +23,7 @@ var VueRuntimeDOM = (() => {
     Fragment: () => Fragment,
     LifecycleHooks: () => LifecycleHooks,
     ReactiveEffect: () => ReactiveEffect,
+    Teleport: () => TeleportImpl,
     Text: () => Text,
     computed: () => computed,
     createRenderer: () => createRenderer,
@@ -698,6 +699,21 @@ var VueRuntimeDOM = (() => {
     }
   }
 
+  // packages/runtime-core1/src/components/teleport.ts
+  var isTeleport = (type) => type.__isTeleport;
+  var TeleportImpl = {
+    __isTeleport: true,
+    process(n1, n2, container, anchor, internals) {
+      const { mountChildren } = internals;
+      if (n1 == null) {
+        const target = document.querySelector(n2.props.to);
+        if (target) {
+          mountChildren(n2.children, target);
+        }
+      }
+    }
+  };
+
   // packages/runtime-core1/src/vnode.ts
   var Text = Symbol("TEXT");
   var Fragment = Symbol("FRAGMENT");
@@ -708,7 +724,7 @@ var VueRuntimeDOM = (() => {
     return n1.type === n2.type && n1.key === n2.key;
   }
   function createVNode(type, props, children) {
-    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
     const vnode = {
       _v_isVnode: true,
       shapeFlag,
@@ -1019,6 +1035,11 @@ var VueRuntimeDOM = (() => {
             processElement(n1, n2, container, anchor, parentComponent);
           } else if (shapeFlag & 6 /* COMPONENT */) {
             processComponent(n1, n2, container, anchor, parentComponent);
+          } else if (shapeFlag & 64 /* TELEPORT */) {
+            type.process(n1, n2, container, anchor, {
+              mountChildren,
+              patchChildren
+            });
           }
       }
     };

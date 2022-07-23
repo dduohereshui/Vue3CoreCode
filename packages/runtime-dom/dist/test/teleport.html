@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <div id="model"></div>
+    <div id="abc"></div>
+    <script>
+      // 组件的渲染逻辑
+      const {
+        createRenderer,
+        render,
+        h,
+        Text,
+        Fragment,
+        reactive,
+        ref,
+        getCurrentInstance,
+        provide,
+        inject,
+        Teleport,
+      } = VueRuntimeDOM;
+
+      const MyComponent = {
+        setup() {
+          const flag = ref(true);
+          return () => {
+            return h("div", null, "yyy");
+          };
+        },
+      };
+
+      const VueComponent = {
+        setup() {
+          return () => {
+            return h(MyComponent);
+          };
+        },
+      };
+
+      // 组件使用props接收的叫做props，没接收的叫做attrs,并且attrs不是响应式的
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>

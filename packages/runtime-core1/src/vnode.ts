@@ -1,4 +1,5 @@
 import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
+import { isTeleport } from "./components/teleport";
 // text类型
 export const Text = Symbol("TEXT");
 // Fragment类型
@@ -22,6 +23,8 @@ export function createVNode(type, props, children?) {
   // type是一个字符串，就代表是一个标签 如div
   let shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
+    : isTeleport(type)
+    ? ShapeFlags.TELEPORT
     : isObject(type)
     ? ShapeFlags.STATEFUL_COMPONENT // type是对象，就是一个组件
     : 0;
