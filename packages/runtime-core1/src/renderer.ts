@@ -33,13 +33,13 @@ export function createRenderer(renderOptions) {
     return children[i];
   };
   // 挂载儿子
-  const mountChildren = (children, container) => {
+  const mountChildren = (children, container, parentComponent) => {
     for (let i = 0; i < children.length; i++) {
       const child = normalize(children, i);
-      patch(null, child, container);
+      patch(null, child, container, parentComponent);
     }
   };
-  const mountElement = (vnode, container, anchor) => {
+  const mountElement = (vnode, container, anchor, parentComponent) => {
     const { type, props, children, shapeFlag } = vnode;
     // 虚拟节点的el属性赋值，后续用于复用节点和更新
     const el = (vnode.el = hostCreateElement(type));
@@ -54,14 +54,17 @@ export function createRenderer(renderOptions) {
       // 儿子是一个文本
       hostSetElementText(el, children);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(children, el);
+      mountChildren(children, el, parentComponent);
     }
 
     hostInsert(el, container, anchor); // 将节点插入到容器中
   };
-  const mountComponent = (vnode, container, anchor) => {
+  const mountComponent = (vnode, container, anchor, parentComponent) => {
     // 创建组件实例 (并且给vnode挂载一个component属性，对应这一次的组件实例)
-    const instance = (vnode.component = createComponentInstance(vnode));
+    const instance = (vnode.component = createComponentInstance(
+      vnode,
+      parentComponent
+    )); // 创建组件实例时就需要得知自己的父亲（父组件）是谁
     // 实例上属性赋值
     setupComponent(instance);
     // 给组件添加响应式（组件的渲染与更新函数）
@@ -116,7 +119,7 @@ export function createRenderer(renderOptions) {
           invokeArrayFns(bm);
         }
         const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值会去收集依赖
-        patch(null, subTree, container, anchor);
+        patch(null, subTree, container, anchor, instance);
         instance.subTree = subTree;
         instance.isMounted = true;
         if (m) {
@@ -134,7 +137,7 @@ export function createRenderer(renderOptions) {
         }
         console.log("组件更新", instance);
         const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值也会去收集依赖
-        patch(instance.subTree, subTree, container, anchor); // 走diff等操作
+        patch(instance.subTree, subTree, container, anchor, instance); // 走diff等操作
         instance.subTree = subTree;
         if (u) {
           invokeArrayFns(u);
@@ -301,7 +304,7 @@ export function createRenderer(renderOptions) {
    * @param n2
    * @param el 复用的容器
    */
-  const patchChildren = (n1, n2, el) => {
+  const patchChildren = (n1, n2, el, parentComponent) => {
     const c1 = n1.children;
     const c2 = n2.children;
     // 新老节点都有三种情况 文本 数组 null
@@ -335,7 +338,7 @@ export function createRenderer(renderOptions) {
         }
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // 新的儿子是数组
-          mountChildren(c2, el);
+          mountChildren(c2, el, parentComponent);
         }
       }
     }
@@ -346,7 +349,7 @@ export function createRenderer(renderOptions) {
    * @param n2
    * @param container
    */
-  const patchElement = (n1, n2) => {
+  const patchElement = (n1, n2, parentComponent) => {
     const el = (n2.el = n1.el);
     const oldProps = n1.props || {};
     const onewProps = n2.props || {};
@@ -354,7 +357,7 @@ export function createRenderer(renderOptions) {
     patchProps(oldProps, onewProps, el);
     // patch children
     // n2 = normalize() 更新的时候没有对字符串做处理
-    patchChildren(n1, n2, el);
+    patchChildren(n1, n2, el, parentComponent);
   };
   const processText = (n1, n2, container) => {
     if (n1 == null) {
@@ -370,32 +373,32 @@ export function createRenderer(renderOptions) {
       }
     }
   };
-  const processFragment = (n1, n2, container) => {
+  const processFragment = (n1, n2, container, parentComponent) => {
     if (n1 == null) {
-      mountChildren(n2.children, container);
+      mountChildren(n2.children, container, parentComponent);
     } else {
-      patchChildren(n1, n2, container);
+      patchChildren(n1, n2, container, parentComponent);
     }
   };
-  const processElement = (n1, n2, container, anchor) => {
+  const processElement = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
       // 元素挂载
-      mountElement(n2, container, anchor);
+      mountElement(n2, container, anchor, parentComponent);
     } else {
       // patch元素
-      patchElement(n1, n2);
+      patchElement(n1, n2, parentComponent);
     }
   };
-  const processComponent = (n1, n2, container, anchor) => {
+  const processComponent = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
-      mountComponent(n2, container, anchor);
+      mountComponent(n2, container, anchor, parentComponent);
     } else {
       // 组件更新靠的是props和插槽
       updateComponent(n1, n2);
     }
   };
   // 核心方法
-  const patch = (n1, n2, container, anchor = null) => {
+  const patch = (n1, n2, container, anchor = null, parentComponent = null) => {
     if (n1 == n2) return;
     if (n1 && !isSameVNode(n1, n2)) {
       // 前后都不是一个节点，则删除n1的节点，并挂载n2的节点
@@ -408,13 +411,13 @@ export function createRenderer(renderOptions) {
         processText(n1, n2, container);
         break;
       case Fragment:
-        processFragment(n1, n2, container);
+        processFragment(n1, n2, container, parentComponent);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, anchor);
+          processElement(n1, n2, container, anchor, parentComponent);
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
-          processComponent(n1, n2, container, anchor);
+          processComponent(n1, n2, container, anchor, parentComponent);
         }
     }
   };

@@ -4,3 +4,4 @@ export { Text, Fragment } from "./vnode";
 export * from "@vue/reactivity";
 export * from "./apiLifecycle";
 export { getCurrentInstance } from "./component";
+export * from "./apiInject";

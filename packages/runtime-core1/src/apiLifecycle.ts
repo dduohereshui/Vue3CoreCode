@@ -10,7 +10,6 @@ function createHook(type) {
   return (hook, target = currentInstance) => {
     if (target) {
       const hooks = target[type] || (target[type] = []);
-
       function wrappedHook() {
         setCurrentInstance(target);
         hook();

@@ -7,7 +7,7 @@ export const setCurrentInstance = (instance) => {
   currentInstance = instance;
 };
 export const getCurrentInstance = () => currentInstance;
-export function createComponentInstance(vnode) {
+export function createComponentInstance(vnode, parent) {
   const instance = {
     data: null,
     vnode,
@@ -21,6 +21,8 @@ export function createComponentInstance(vnode) {
     render: null,
     setupState: {}, // setup函数返回的state
     slots: {},
+    parent,
+    provides: parent ? parent.provides : Object.create(null), // 组件上的provides都是用的父亲的provides
   };
   return instance;
 }
