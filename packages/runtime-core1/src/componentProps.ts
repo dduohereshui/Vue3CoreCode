@@ -1,5 +1,5 @@
 import { reactive } from "@vue/reactivity";
-import { hasOwn } from "@vue/shared";
+import { hasOwn, ShapeFlags } from "@vue/shared";
 
 export function initProps(instance, rawProps) {
   const props = {};
@@ -18,4 +18,10 @@ export function initProps(instance, rawProps) {
   // 这里应该是shallowReactive
   instance.props = reactive(props);
   instance.attrs = attrs;
+}
+
+export function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    instance.slots = children;
+  }
 }

@@ -1,6 +1,6 @@
 import { proxyRefs, reactive } from "@vue/reactivity";
 import { hasOwn, isFunction, isObject } from "@vue/shared";
-import { initProps } from "./componentProps";
+import { initProps, initSlots } from "./componentProps";
 
 export function createComponentInstance(vnode) {
   const instance = {
@@ -15,11 +15,13 @@ export function createComponentInstance(vnode) {
     proxy: null, //渲染上下文，模板中用的data props attrs都是这里来的
     render: null,
     setupState: {}, // setup函数返回的state
+    slots: {},
   };
   return instance;
 }
 const publicPropertyMap = {
   $attrs: (instance) => instance.attrs,
+  $slots: (instance) => instance.slots,
 };
 const publicInstanceProxy = {
   get(target, key) {
@@ -54,9 +56,10 @@ const publicInstanceProxy = {
 };
 export function setupComponent(instance) {
   // vnode上的props是往组件上传的属性,  这里的type就是组件对象，该对象里面有data props render等属性
-  const { props, type } = instance.vnode;
+  const { props, type, children } = instance.vnode;
 
   initProps(instance, props);
+  initSlots(instance, children);
 
   instance.proxy = new Proxy(instance, publicInstanceProxy);
 
@@ -76,6 +79,7 @@ export function setupComponent(instance) {
           handler(...args);
         }
       },
+      slot: instance.slots,
     };
     const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
