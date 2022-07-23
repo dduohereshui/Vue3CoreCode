@@ -1,5 +1,5 @@
 import { ReactiveEffect } from "@vue/reactivity";
-import { isNumber, isString, ShapeFlags } from "@vue/shared";
+import { invokeArrayFns, isNumber, isString, ShapeFlags } from "@vue/shared";
 import {
   createComponentInstance,
   hasPropsChange,
@@ -111,21 +111,34 @@ export function createRenderer(renderOptions) {
       if (!instance.isMounted) {
         //组件 挂载
         console.log("组件挂载");
+        const { bm, m } = instance;
+        if (bm) {
+          invokeArrayFns(bm);
+        }
         const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值会去收集依赖
         patch(null, subTree, container, anchor);
         instance.subTree = subTree;
         instance.isMounted = true;
+        if (m) {
+          invokeArrayFns(m);
+        }
       } else {
         //组件更新
-        const { next } = instance; // next是组件props或slots更新时在实例上挂的值，执行instance.update时可以拿到
+        const { next, bu, u } = instance; // next是组件props或slots更新时在实例上挂的值，执行instance.update时可以拿到
         if (next) {
           // 更新props和slots
           updateComponentPreRender(instance, next);
+        }
+        if (bu) {
+          invokeArrayFns(bu);
         }
         console.log("组件更新", instance);
         const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值也会去收集依赖
         patch(instance.subTree, subTree, container, anchor); // 走diff等操作
         instance.subTree = subTree;
+        if (u) {
+          invokeArrayFns(u);
+        }
       }
     };
     const effect = new ReactiveEffect(componentUpdateFn, () =>

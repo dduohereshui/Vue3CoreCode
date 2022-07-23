@@ -1,7 +1,12 @@
 import { proxyRefs, reactive } from "@vue/reactivity";
 import { hasOwn, isFunction, isObject } from "@vue/shared";
 import { initProps, initSlots } from "./componentProps";
-
+// 正在运行的组件instance
+export let currentInstance = null;
+export const setCurrentInstance = (instance) => {
+  currentInstance = instance;
+};
+export const getCurrentInstance = () => currentInstance;
 export function createComponentInstance(vnode) {
   const instance = {
     data: null,
@@ -79,9 +84,12 @@ export function setupComponent(instance) {
           handler(...args);
         }
       },
-      slot: instance.slots,
+      attrs: instance.attrs,
+      slots: instance.slots,
     };
+    setCurrentInstance(instance);
     const setupResult = setup(instance.props, setupContext);
+    setCurrentInstance(null);
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else if (isObject(setupResult)) {
