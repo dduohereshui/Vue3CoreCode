@@ -67,12 +67,22 @@ export function setupComponent(instance) {
     instance.data = reactive(data.call(instance.proxy));
   }
   if (setup) {
-    const setupResult = setup(instance.props);
+    const setupContext = {
+      emit: (event, ...args) => {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        // 组件传的函数存储在组件上的props中
+        const handler = props[eventName];
+        if (handler) {
+          handler(...args);
+        }
+      },
+    };
+    const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else if (isObject(setupResult)) {
       instance.setupState = proxyRefs(setupResult);
-      console.log(instance.setupState);
+      // console.log(instance.setupState);
     }
   }
   if (!instance.render) {
