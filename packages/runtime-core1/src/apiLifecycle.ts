@@ -1,5 +1,5 @@
 import { currentInstance } from "./component";
-
+import { setCurrentInstance } from "./component";
 export const enum LifecycleHooks {
   BEFORE_MOUNT = "bm",
   MOUNTED = "m",
@@ -9,9 +9,14 @@ export const enum LifecycleHooks {
 function createHook(type) {
   return (hook, target = currentInstance) => {
     if (target) {
-      function wrappedHook() {}
       const hooks = target[type] || (target[type] = []);
-      hooks.push(hook);
+
+      function wrappedHook() {
+        setCurrentInstance(target);
+        hook();
+        setCurrentInstance(null);
+      }
+      hooks.push(wrappedHook);
     }
   };
 }
