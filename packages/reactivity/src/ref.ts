@@ -24,6 +24,7 @@ class RefImpl {
     }
   }
 }
+
 export function ref(value) {
   return new RefImpl(value);
 }
@@ -50,7 +51,7 @@ class ObjectRefImpl {
 }
 
 export function proxyRefs(object) {
-  new Proxy(object, {
+  return new Proxy(object, {
     get(target, key, receiver) {
       let r = Reflect.get(target, key, receiver);
       if (r.__v_isRef) {

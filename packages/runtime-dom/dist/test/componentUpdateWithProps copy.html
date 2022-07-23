@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text, Fragment } = VueRuntimeDOM;
+      const MyComponent = {
+        props: {
+          flag: Boolean,
+        },
+        render() {
+          return h("div", null, `${this.flag ? "地球" : "月球"}`);
+        },
+      };
+      const VueComponent = {
+        data() {
+          return {
+            flag: true,
+          };
+        },
+        // vue模板会被编译成render函数
+        render() {
+          return h(Fragment, null, [
+            h(
+              "button",
+              {
+                onClick: () => {
+                  this.flag = !this.flag;
+                },
+              },
+              "更新"
+            ),
+            h(MyComponent, { flag: this.flag }),
+          ]);
+        },
+      };
+
+      // 组件使用props接收的叫做props，没接收的叫做attrs,并且attrs不是响应式的
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>

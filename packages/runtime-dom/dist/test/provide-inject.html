@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const {
+        createRenderer,
+        render,
+        h,
+        Text,
+        Fragment,
+        reactive,
+        ref,
+        getCurrentInstance,
+        provide,
+        inject,
+      } = VueRuntimeDOM;
+
+      const MyComponent = {
+        setup() {
+          const state = inject("parent");
+          // 默认值
+          const name = inject("name", "gcdhgdf");
+          const instance = getCurrentInstance();
+          // console.log(instance.parent);
+          console.log(state);
+          return () => {
+            return h("div", null, `${state.age}${name}`);
+          };
+        },
+      };
+
+      const VueComponent = {
+        setup() {
+          const state = reactive({ age: 18 });
+          provide("parent", state);
+
+          setTimeout(() => {
+            state.age = 20;
+          }, 2000);
+          return () => {
+            return h(MyComponent);
+          };
+        },
+        // vue模板会被编译成render函数
+      };
+
+      // 组件使用props接收的叫做props，没接收的叫做attrs,并且attrs不是响应式的
+      render(h(VueComponent), app);
+    </script>
+  </body>
+</html>

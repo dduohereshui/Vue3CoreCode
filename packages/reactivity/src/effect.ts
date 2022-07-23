@@ -55,9 +55,7 @@ export function effect(fn, options: any = {}) {
 // 一个属性对应多个effect，一个effect对应多个属性
 const targetMap = new WeakMap();
 export function track(target, type, key) {
-  // debugger;
   if (!activeEffect) return;
-  // debugger;
   let depsMap = targetMap.get(target);
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map())); // 对象对应一个Map
@@ -93,7 +91,6 @@ export function trigger(target, type, key, oldVal, newVal) {
     triggerEffects(effects);
   }
 }
-
 export function triggerEffects(effects) {
   // 引用隔离，避免同时add delete导致死循环
   effects = new Set(effects);

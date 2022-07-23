@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text, Fragment } = VueRuntimeDOM;
+      const Vue2Component = {
+        data() {
+          return {
+            name: "cjl",
+            age: 22,
+          };
+        },
+        props: {
+          address: {
+            type: String,
+            default: "北京",
+          },
+        },
+        // vue模板会被编译成render函数
+        render() {
+          return h(
+            "div",
+            null,
+            `${this.name} ${this.age},${this.address},${this.$attrs.a}`
+          );
+        },
+      };
+      // 组件使用props接收的叫做props，没接收的叫做attrs,并且attrs不是响应式的
+      render(h(Vue2Component, { address: "杭州", a: 1, b: 2 }), app);
+
+      // setTimeout(() => {
+      //   render(
+      //     h(Fragment, null, [
+      //       h("p", null, "哈哈恭喜蔡嘎是v"),
+      //       h("h1", null, "错过一首都唱一首"),
+      //     ]),
+      //     app
+      //   );
+      // }, 2000);
+    </script>
+  </body>
+</html>

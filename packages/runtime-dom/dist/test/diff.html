@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="../runtime-dom.global.js"></script>
+    <div id="app"></div>
+    <script>
+      // 组件的渲染逻辑
+      const { createRenderer, render, h, Text } = VueRuntimeDOM;
+
+      const vnode = h("div", null, [
+        h("span", { key: "a" }, "a"),
+        h("span", { key: "b" }, "b"),
+        h("span", { key: "c" }, "c"),
+        h("span", { key: "d" }, "d"),
+        h("span", { key: "e" }, "e"),
+        h("span", { key: "i" }, "i"),
+        h("span", { key: "f" }, "f"),
+        h("span", { key: "g" }, "g"),
+      ]);
+      render(vnode, document.getElementById("app"));
+      setTimeout(() => {
+        render(
+          h("div", null, [
+            h("span", { key: "a" }, "a"),
+            h("span", { key: "b" }, "b"),
+            h("span", { key: "e" }, "e"),
+            h("span", { key: "c" }, "c"),
+            h("span", { key: "d" }, "d"),
+            h("span", { key: "h" }, "h"),
+            h("span", { key: "f" }, "f"),
+            h("span", { key: "g" }, "g"),
+          ]),
+          app
+        );
+      }, 2000);
+    </script>
+  </body>
+</html>
