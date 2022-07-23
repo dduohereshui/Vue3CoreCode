@@ -1,5 +1,5 @@
-import { reactive } from "@vue/reactivity";
-import { hasOwn, isFunction } from "@vue/shared";
+import { proxyRefs, reactive } from "@vue/reactivity";
+import { hasOwn, isFunction, isObject } from "@vue/shared";
 import { initProps } from "./componentProps";
 
 export function createComponentInstance(vnode) {
@@ -14,6 +14,7 @@ export function createComponentInstance(vnode) {
     attrs: {},
     proxy: null, //渲染上下文，模板中用的data props attrs都是这里来的
     render: null,
+    setupState: {}, // setup函数返回的state
   };
   return instance;
 }
@@ -23,8 +24,10 @@ const publicPropertyMap = {
 const publicInstanceProxy = {
   get(target, key) {
     // 对于data 会进行收集依赖
-    const { data, props } = target;
-    if (data && hasOwn(data, key)) {
+    const { data, props, setupState } = target;
+    if (setupState && hasOwn(setupState, key)) {
+      return setupState[key];
+    } else if (data && hasOwn(data, key)) {
       return data[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
@@ -36,8 +39,10 @@ const publicInstanceProxy = {
     }
   },
   set(target, key, value) {
-    const { data, props } = target;
-    if (data && hasOwn(data, key)) {
+    const { data, props, setupState } = target;
+    if (setupState && hasOwn(setupState, key)) {
+      setupState[key] = value;
+    } else if (data && hasOwn(data, key)) {
       data[key] = value;
       return true;
     } else if (props && hasOwn(props, key)) {
@@ -55,13 +60,25 @@ export function setupComponent(instance) {
 
   instance.proxy = new Proxy(instance, publicInstanceProxy);
 
-  const { data, render } = type;
+  const { data, render, setup } = type;
+
   if (data && isFunction(data)) {
     // 用户使用的data就是一个赋予了响应式功能的对象
     instance.data = reactive(data.call(instance.proxy));
   }
-  // 实例上挂载render方法，template解析成的方法
-  instance.render = render;
+  if (setup) {
+    const setupResult = setup(instance.props);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else if (isObject(setupResult)) {
+      instance.setupState = proxyRefs(setupResult);
+      console.log(instance.setupState);
+    }
+  }
+  if (!instance.render) {
+    // 实例上挂载render方法，template解析成的方法
+    instance.render = render;
+  }
 }
 
 export function updateProps(prevProps, nextProps) {

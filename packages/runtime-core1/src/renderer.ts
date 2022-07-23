@@ -111,7 +111,7 @@ export function createRenderer(renderOptions) {
       if (!instance.isMounted) {
         //组件 挂载
         console.log("组件挂载");
-        const subTree = render.call(instance.proxy); // 这里组件里用到的值会去收集依赖
+        const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值会去收集依赖
         patch(null, subTree, container, anchor);
         instance.subTree = subTree;
         instance.isMounted = true;
@@ -123,7 +123,7 @@ export function createRenderer(renderOptions) {
           updateComponentPreRender(instance, next);
         }
         console.log("组件更新", instance);
-        const subTree = render.call(instance.proxy); // 这里组件里用到的值也会去收集依赖
+        const subTree = render.call(instance.proxy, instance.proxy); // 这里组件里用到的值也会去收集依赖
         patch(instance.subTree, subTree, container, anchor); // 走diff等操作
         instance.subTree = subTree;
       }
@@ -340,6 +340,7 @@ export function createRenderer(renderOptions) {
     // patch props
     patchProps(oldProps, onewProps, el);
     // patch children
+    // n2 = normalize() 更新的时候没有对字符串做处理
     patchChildren(n1, n2, el);
   };
   const processText = (n1, n2, container) => {
