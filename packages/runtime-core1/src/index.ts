@@ -6,3 +6,5 @@ export * from "./apiLifecycle";
 export { getCurrentInstance } from "./component";
 export * from "./apiInject";
 export { TeleportImpl as Teleport } from "./components/teleport";
+
+export { defineAsyncComponent } from "./defineAsyncComponent";

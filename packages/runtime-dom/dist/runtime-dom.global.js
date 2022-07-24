@@ -27,6 +27,7 @@ var VueRuntimeDOM = (() => {
     Text: () => Text,
     computed: () => computed,
     createRenderer: () => createRenderer,
+    defineAsyncComponent: () => defineAsyncComponent,
     effect: () => effect,
     effectScope: () => effectScope,
     getCurrentInstance: () => getCurrentInstance,
@@ -1044,6 +1045,11 @@ var VueRuntimeDOM = (() => {
       }
     };
     const unmount = (vnode) => {
+      if (vnode.type === Fragment) {
+        return unmountChildren(vnode.children);
+      } else if (vnode.shapeFlag & 6 /* COMPONENT */) {
+        return unmount(vnode.component.subTree);
+      }
       hostRemove(vnode.el);
     };
     const render2 = (vnode, container) => {
@@ -1128,6 +1134,51 @@ var VueRuntimeDOM = (() => {
     } else {
       return defaultVal;
     }
+  }
+
+  // packages/runtime-core1/src/defineAsyncComponent.ts
+  function defineAsyncComponent(options) {
+    if (isFunction(options)) {
+      options = { loader: options };
+    }
+    return {
+      setup() {
+        const { loader, timeout, delay, errorComponent, loadingComponent } = options;
+        const loaded = ref(false);
+        const error = ref(false);
+        const showLoading = ref(false);
+        let Comp = null;
+        loader().then((c) => {
+          Comp = c;
+          loaded.value = true;
+        }).catch((e) => {
+          error.value = e;
+        }).finally(() => {
+          showLoading.value = false;
+        });
+        if (timeout) {
+          setTimeout(() => {
+            if (!loaded.value) {
+              error.value = true;
+            }
+          }, timeout);
+        }
+        if (delay) {
+          setTimeout(() => {
+            showLoading.value = true;
+          }, delay);
+        }
+        return () => {
+          if (loaded.value) {
+            return h(Comp);
+          } else if (error.value && errorComponent) {
+            return h(errorComponent);
+          } else if (showLoading.value && loadingComponent) {
+            return h(loadingComponent);
+          }
+        };
+      }
+    };
   }
 
   // packages/runtime-dom/src/index.ts
